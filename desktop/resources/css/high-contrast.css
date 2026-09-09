@@ -116,9 +116,23 @@
 .default-color0.chart-series-line { -fx-stroke: -accent; -fx-stroke-width: 3; }
 .default-color1.chart-series-line { -fx-stroke: #00d5ff; -fx-stroke-width: 3; }
 
+/* dialogs */
 .dialog-pane { -fx-background-color: -page; -fx-border-color: -accent; -fx-border-width: 2; -fx-background-radius: 14; -fx-border-radius: 14; }
-.dialog-pane .header-panel { -fx-background-color: -raised; -fx-background-radius: 14 14 0 0; }
+.dialog-pane .header-panel {
+    -fx-background-color: -raised; -fx-background-radius: 14 14 0 0;
+    -fx-border-color: transparent transparent -accent transparent; -fx-border-width: 0 0 2 0;
+    -fx-padding: 16 20 16 20;
+}
 .dialog-pane .header-panel .label { -fx-text-fill: -accent; -fx-font-size: 17px; -fx-font-weight: bold; }
 .dialog-pane .content, .dialog-pane .content.label, .dialog-pane .label { -fx-text-fill: -ink; }
+.dialog-pane .content { -fx-padding: 18 22 6 22; }
+.dialog-pane .header-panel .dialog-badge {
+    -fx-background-radius: 18; -fx-font-size: 19px; -fx-font-weight: bold;
+    -fx-text-fill: -accent-ink;
+}
+.dialog-pane .dialog-badge-info { -fx-background-color: -accent; }
+.dialog-pane .dialog-badge-error { -fx-background-color: -bad; }
+.dialog-pane .dialog-badge-confirm { -fx-background-color: -good; }
 .dialog-pane .button-bar .button { -fx-background-color: -page; -fx-text-fill: -accent; }
+.dialog-pane .button-bar .button:default { -fx-background-color: -accent; -fx-text-fill: -accent-ink; }
 .dialog-pane .button-bar .button:hover { -fx-background-color: #333300; }

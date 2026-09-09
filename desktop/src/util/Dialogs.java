@@ -1,5 +1,6 @@
 package util;
 
+import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
@@ -44,8 +45,35 @@ public final class Dialogs {
         alert.setTitle("Guess Market");
         alert.setHeaderText(header);
         alert.setResizable(true);
+        alert.setGraphic(badge(type));
         SkinManager.style(alert.getDialogPane());
         return alert;
+    }
+
+    /**
+     * The stock alert graphic is drawn by the toolkit in its own blue, which
+     * belongs to no skin. This replaces it with a mark the skins can colour.
+     */
+    private static Label badge(Alert.AlertType type) {
+        String glyph;
+        String modifier;
+        if (type == Alert.AlertType.ERROR || type == Alert.AlertType.WARNING) {
+            glyph = "!";
+            modifier = "dialog-badge-error";
+        } else if (type == Alert.AlertType.CONFIRMATION) {
+            glyph = "?";
+            modifier = "dialog-badge-confirm";
+        } else {
+            glyph = "i";
+            modifier = "dialog-badge-info";
+        }
+        Label badge = new Label(glyph);
+        badge.getStyleClass().addAll("dialog-badge", modifier);
+        badge.setAlignment(Pos.CENTER);
+        badge.setMinSize(36, 36);
+        badge.setPrefSize(36, 36);
+        badge.setMaxSize(36, 36);
+        return badge;
     }
 
     /**

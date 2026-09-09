@@ -190,11 +190,28 @@
 
 /* dialogs */
 .dialog-pane {
-    -fx-background-color: -page; -fx-border-color: -line;
+    -fx-background-color: -surface; -fx-border-color: -line;
     -fx-background-radius: 14; -fx-border-radius: 14;
 }
-.dialog-pane .header-panel { -fx-background-color: -raised; -fx-background-radius: 14 14 0 0; }
-.dialog-pane .header-panel .label { -fx-text-fill: -ink; -fx-font-size: 16px; -fx-font-weight: bold; }
+.dialog-pane .header-panel {
+    -fx-background-color: linear-gradient(to bottom, #222c42, #1a2233);
+    -fx-background-radius: 14 14 0 0;
+    -fx-border-color: transparent transparent -line transparent;
+    -fx-padding: 16 20 16 20;
+}
+.dialog-pane .header-panel .label { -fx-text-fill: -ink; -fx-font-size: 17px; -fx-font-weight: bold; }
 .dialog-pane .content, .dialog-pane .content.label, .dialog-pane .label { -fx-text-fill: -ink; }
+.dialog-pane .content { -fx-padding: 18 22 6 22; }
+.dialog-pane .header-panel .dialog-badge {
+    -fx-background-radius: 18; -fx-font-size: 19px; -fx-font-weight: bold;
+    -fx-text-fill: -accent-ink;
+}
+.dialog-pane .dialog-badge-info { -fx-background-color: linear-gradient(to bottom right, #8b7cff, #5b4de0); }
+.dialog-pane .dialog-badge-error { -fx-background-color: linear-gradient(to bottom right, #ff8497, #ff6b81); }
+.dialog-pane .dialog-badge-confirm { -fx-background-color: linear-gradient(to bottom right, #2bb98a, #17916a); }
 .dialog-pane .button-bar .button { -fx-background-color: linear-gradient(to bottom, #26314a, #1b2436); }
+.dialog-pane .button-bar .button:default {
+    -fx-background-color: linear-gradient(to bottom, #7c6bff, #5b4de0);
+    -fx-text-fill: -accent-ink; -fx-border-color: #8b7cff;
+}
 .dialog-pane .button-bar .button:hover { -fx-background-color: linear-gradient(to bottom, #7c6bff, #5b4de0); }

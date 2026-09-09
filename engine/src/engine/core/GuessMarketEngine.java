@@ -154,8 +154,10 @@ public class GuessMarketEngine implements GMEngine {
 
         String winner = winningOptionName(event);
         Double profitOrLoss = null;
+        Double tradingResult = null;
         if (winner != null && holding != null) {
             profitOrLoss = holding.netCashFlow();
+            tradingResult = holding.tradingResult();
         }
 
         List<TradeDTO> trades = new ArrayList<>();
@@ -178,7 +180,9 @@ public class GuessMarketEngine implements GMEngine {
                 event.getOption(1).getName(),
                 holding == null ? 0L : holding.getQuantity(1),
                 holding == null ? 0.0 : holding.getAmountPaid(1),
-                winner, profitOrLoss);
+                winner, profitOrLoss, tradingResult,
+                holding == null ? 0.0 : holding.getMarketMakerPaid(),
+                holding == null ? 0.0 : holding.getMarketMakerReceived());
     }
 
     @Override

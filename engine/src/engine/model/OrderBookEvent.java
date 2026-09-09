@@ -84,7 +84,7 @@ public class OrderBookEvent extends Event {
             double fee = getCommissionType() == CommissionType.ON_CLOSE ? commissionOn(gross) : 0.0;
             getAccount().withdraw(gross);
             user.receive(gross - fee);
-            holding.recordPayout(winningIndex, gross - fee);
+            holding.recordPayout(winningIndex, gross);
             holding.addCommission(fee);
             creditCommission(marketMaker, fee);
             summary.recordPayout(gross - fee, fee);
@@ -94,6 +94,7 @@ public class OrderBookEvent extends Event {
         if (remainder != 0) {
             getAccount().withdraw(remainder);
             marketMaker.receive(remainder);
+            marketMaker.holdingFor(getId()).recordMarketMakerReceived(remainder);
             summary.recordReturnedToMarketMaker(remainder);
         }
         return summary;

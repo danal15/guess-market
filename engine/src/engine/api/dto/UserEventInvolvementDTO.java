@@ -27,13 +27,18 @@ public final class UserEventInvolvementDTO {
 
     private final String winningOptionName;
     private final Double profitOrLoss;
+    private final Double tradingResult;
+    private final double marketMakerPaid;
+    private final double marketMakerReceived;
 
     public UserEventInvolvementDTO(int eventId, String eventName, String methodLabel, boolean orderBook,
                                    String statusLabel, boolean marketMaker, double commissionPaid,
                                    List<TradeDTO> tradesNewestFirst,
                                    String option1Name, long option1Quantity, double option1Paid,
                                    String option2Name, long option2Quantity, double option2Paid,
-                                   String winningOptionName, Double profitOrLoss) {
+                                   String winningOptionName, Double profitOrLoss,
+                                   Double tradingResult, double marketMakerPaid,
+                                   double marketMakerReceived) {
         this.eventId = eventId;
         this.eventName = eventName;
         this.methodLabel = methodLabel;
@@ -50,6 +55,9 @@ public final class UserEventInvolvementDTO {
         this.option2Paid = option2Paid;
         this.winningOptionName = winningOptionName;
         this.profitOrLoss = profitOrLoss;
+        this.tradingResult = tradingResult;
+        this.marketMakerPaid = marketMakerPaid;
+        this.marketMakerReceived = marketMakerReceived;
     }
 
     public int getEventId() {
@@ -113,8 +121,23 @@ public final class UserEventInvolvementDTO {
         return winningOptionName;
     }
 
-    /** Null while the event is still open. */
+    /** The whole effect on the balance. Null while the event is still open. */
     public Double getProfitOrLoss() {
         return profitOrLoss;
+    }
+
+    /** Just the buying and selling part. Null while the event is still open. */
+    public Double getTradingResult() {
+        return tradingResult;
+    }
+
+    /** Money put in because this user runs the event (the LMSR subsidy). */
+    public double getMarketMakerPaid() {
+        return marketMakerPaid;
+    }
+
+    /** Commission and leftover funds taken back as the event's market maker. */
+    public double getMarketMakerReceived() {
+        return marketMakerReceived;
     }
 }

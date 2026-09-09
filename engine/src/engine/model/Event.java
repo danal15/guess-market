@@ -130,6 +130,7 @@ public abstract class Event implements Serializable {
             return;
         }
         marketMaker.receive(amount);
+        marketMaker.holdingFor(id).recordMarketMakerReceived(amount);
         totalCommissionCollected += amount;
     }
 

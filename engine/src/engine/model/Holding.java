@@ -12,6 +12,9 @@ public class Holding implements Serializable {
     private final double[] amountReceived = new double[2];
     private double commissionPaid;
     private boolean hasEverOrdered;
+    /** Money moved because this user runs the event, not because they traded in it. */
+    private double marketMakerPaid;
+    private double marketMakerReceived;
 
     public Holding(int eventId) {
         this.eventId = eventId;
@@ -34,6 +37,29 @@ public class Holding implements Serializable {
 
     public void addCommission(double amount) {
         commissionPaid += amount;
+    }
+
+    public void recordMarketMakerPaid(double amount) {
+        marketMakerPaid += amount;
+    }
+
+    public void recordMarketMakerReceived(double amount) {
+        marketMakerReceived += amount;
+    }
+
+    public double getMarketMakerPaid() {
+        return marketMakerPaid;
+    }
+
+    public double getMarketMakerReceived() {
+        return marketMakerReceived;
+    }
+
+    /** What the user gained or lost purely from trading in this event. */
+    public double tradingResult() {
+        double paid = amountPaid[0] + amountPaid[1] + commissionPaid;
+        double received = amountReceived[0] + amountReceived[1];
+        return received - paid;
     }
 
     /** Records money received at resolution without changing the held quantity. */
@@ -77,11 +103,13 @@ public class Holding implements Serializable {
         return quantities[0] > 0 || quantities[1] > 0;
     }
 
-    /** Net cash result of this participation, given the payout already received. */
+    /**
+     * Everything this event did to the user's balance: their trading plus,
+     * when they run the event, the money they put in and took back out as its
+     * market maker. This is what reconciles with the account balance.
+     */
     public double netCashFlow() {
-        double paid = amountPaid[0] + amountPaid[1] + commissionPaid;
-        double received = amountReceived[0] + amountReceived[1];
-        return received - paid;
+        return tradingResult() - marketMakerPaid + marketMakerReceived;
     }
 
     private void checkIndex(int optionIndex) {

@@ -44,13 +44,49 @@ public final class UserInvolvementView {
 
         if (involvement.getWinningOptionName() != null) {
             box.getChildren().add(new Label("Winning option: " + involvement.getWinningOptionName()));
-            if (involvement.getProfitOrLoss() != null) {
-                Label result = new Label("Your result from this event: "
-                        + Format.signed(involvement.getProfitOrLoss()));
-                result.getStyleClass().add("section-title");
-                box.getChildren().add(result);
-            }
+            box.getChildren().add(resultBlock(involvement));
         }
+        return box;
+    }
+
+    /**
+     * Running an event and trading in it are two different pots of money. Shown
+     * separately when the user did both, so the final figure adds up to the
+     * change the user can see in their balance.
+     */
+    private static Node resultBlock(UserEventInvolvementDTO involvement) {
+        VBox box = new VBox(2);
+        box.setPadding(new Insets(6, 0, 0, 0));
+
+        boolean ranTheEvent = involvement.getMarketMakerPaid() > 0
+                || involvement.getMarketMakerReceived() > 0;
+
+        if (ranTheEvent && involvement.getTradingResult() != null) {
+            GridPane grid = new GridPane();
+            grid.setHgap(14);
+            grid.setVgap(2);
+            int row = 0;
+            grid.addRow(row++, new Label("From trading:"),
+                    new Label(Format.signed(involvement.getTradingResult())));
+            if (involvement.getMarketMakerPaid() > 0) {
+                grid.addRow(row++, new Label("Put in to run the event:"),
+                        new Label(Format.signed(-involvement.getMarketMakerPaid())));
+            }
+            if (involvement.getMarketMakerReceived() > 0) {
+                grid.addRow(row++, new Label("Taken back as market maker:"),
+                        new Label(Format.signed(involvement.getMarketMakerReceived())));
+            }
+            box.getChildren().add(grid);
+        }
+
+        Label total = new Label("Your result from this event: "
+                + Format.signed(involvement.getProfitOrLoss()));
+        total.getStyleClass().add("section-title");
+        box.getChildren().add(total);
+
+        Label note = new Label("This is the total change to your balance from this event.");
+        note.getStyleClass().add("hint-label");
+        box.getChildren().add(note);
         return box;
     }
 

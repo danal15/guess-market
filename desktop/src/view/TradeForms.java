@@ -349,12 +349,21 @@ public final class TradeForms {
         long available = quote.getAvailableNow();
 
         if (best == null || available <= 0) {
-            return quote.isBuying()
+            if (!quote.isBuying()) {
+                return "Nobody is bidding for this option right now, so your order will wait in the"
+                        + " book until somebody does. No money moves until it trades.";
+            }
+            // Where the event cannot create shares, no bid on the other option
+            // will ever help, and saying otherwise sends the trader looking for
+            // something that cannot happen.
+            return quote.isMintingAllowed()
                     ? "Nobody is selling this option right now, and nobody is bidding enough on the"
                             + " other one to create new shares. Your order will wait in the book"
                             + " until somebody does. No money moves until it trades."
-                    : "Nobody is bidding for this option right now, so your order will wait in the"
-                            + " book until somebody does. No money moves until it trades.";
+                    : "Nobody is selling this option right now. This event does not create new"
+                            + " shares, so the only way in is from somebody who already holds them"
+                            + " and offers them for sale. Your order will wait in the book until"
+                            + " one does. No money moves until it trades.";
         }
 
         String offer = quote.isBuying()

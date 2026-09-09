@@ -20,11 +20,13 @@ public final class OrderQuoteDTO {
     private final Double bestOpposingPrice;
     private final boolean wouldTradeNow;
     private final long availableNow;
+    private final boolean mintingAllowed;
 
     public OrderQuoteDTO(boolean buying, double orderValue, double commission, double totalCost,
                          double balance, long sharesHeld, boolean affordable, boolean enoughShares,
                          double maxPrice, boolean priceValid,
-                         Double bestOpposingPrice, boolean wouldTradeNow, long availableNow) {
+                         Double bestOpposingPrice, boolean wouldTradeNow, long availableNow,
+                         boolean mintingAllowed) {
         this.buying = buying;
         this.orderValue = orderValue;
         this.commission = commission;
@@ -38,6 +40,7 @@ public final class OrderQuoteDTO {
         this.bestOpposingPrice = bestOpposingPrice;
         this.wouldTradeNow = wouldTradeNow;
         this.availableNow = availableNow;
+        this.mintingAllowed = mintingAllowed;
     }
 
     public boolean isBuying() {
@@ -94,5 +97,10 @@ public final class OrderQuoteDTO {
     /** How many shares are on offer at that best price right now. */
     public long getAvailableNow() {
         return availableNow;
+    }
+
+    /** Whether this event can create new shares from two opposite buyers. */
+    public boolean isMintingAllowed() {
+        return mintingAllowed;
     }
 }

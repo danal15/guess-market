@@ -297,7 +297,8 @@ public class GuessMarketEngine implements GMEngine {
                 trader.getAccount().getBalance(), held,
                 !buying || trader.canAfford(total),
                 buying || held >= quantity,
-                maxPrice, priceValid, opposingPrice, wouldTrade, availableQuantity);
+                maxPrice, priceValid, opposingPrice, wouldTrade, availableQuantity,
+                event.isAllowMint());
     }
 
     /**

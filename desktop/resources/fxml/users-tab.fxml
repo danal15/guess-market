@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<SplitPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+           fx:controller="controller.UsersTabController" dividerPositions="0.25">
+    <items>
+
+        <VBox spacing="6" styleClass="pane-box">
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8"/>
+            </padding>
+            <Label text="Users" styleClass="section-title"/>
+            <TableView fx:id="usersTable">
+                <VBox.vgrow>
+                    <Priority fx:constant="ALWAYS"/>
+                </VBox.vgrow>
+            </TableView>
+            <Button fx:id="createEventButton" text="Create new event..." maxWidth="Infinity"
+                    onAction="#onCreateEvent"/>
+        </VBox>
+
+        <VBox spacing="6" styleClass="pane-box">
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8"/>
+            </padding>
+
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="User details" styleClass="section-title"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="blockedLabel" text="" styleClass="blocked-label"/>
+                <Label fx:id="balanceLabel" text="Balance: -" styleClass="balance-label"/>
+            </HBox>
+
+            <Label text="Events taking part in / owned" styleClass="section-title"/>
+            <TableView fx:id="userEventsTable" prefHeight="150"/>
+
+            <HBox fx:id="actionBar" spacing="8" alignment="CENTER_LEFT"/>
+
+            <Label text="Event details and trade" styleClass="section-title"/>
+            <ScrollPane fx:id="userDetailsHolder" fitToWidth="true">
+                <VBox.vgrow>
+                    <Priority fx:constant="ALWAYS"/>
+                </VBox.vgrow>
+            </ScrollPane>
+        </VBox>
+
+    </items>
+</SplitPane>

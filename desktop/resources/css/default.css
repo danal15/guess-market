@@ -3,20 +3,11 @@
     -fx-font-size: 12px;
     -fx-background-color: #f4f5f7;
 }
-
-.app-title {
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
-}
-
-.section-title {
-    -fx-font-weight: bold;
-}
-
-.pane-box {
-    -fx-background-color: white;
-}
-
-.balance-label {
-    -fx-font-weight: bold;
-}
+.app-title { -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #1b2430; }
+.section-title { -fx-font-weight: bold; -fx-text-fill: #1b2430; }
+.pane-box { -fx-background-color: white; }
+.header { -fx-background-color: #e8eaed; }
+.balance-label { -fx-font-weight: bold; -fx-font-size: 14px; }
+.blocked-label { -fx-text-fill: #b3261e; -fx-font-weight: bold; }
+.button, .toggle-button { -fx-background-radius: 4; -fx-padding: 5 12 5 12; }
+.toggle-button:selected { -fx-background-color: #3b6ea5; -fx-text-fill: white; }

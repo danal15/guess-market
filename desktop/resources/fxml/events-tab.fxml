@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<SplitPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+           fx:controller="controller.EventsTabController" dividerPositions="0.5">
+    <items>
+
+        <VBox spacing="6" styleClass="pane-box">
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8"/>
+            </padding>
+            <Label text="Filters" styleClass="section-title"/>
+            <HBox spacing="6">
+                <Label text="Type:" minWidth="80"/>
+                <HBox fx:id="methodFilterBox" spacing="4"/>
+            </HBox>
+            <HBox spacing="6">
+                <Label text="Status:" minWidth="80"/>
+                <HBox fx:id="statusFilterBox" spacing="4"/>
+            </HBox>
+            <HBox spacing="6">
+                <Label text="Commission:" minWidth="80"/>
+                <HBox fx:id="commissionFilterBox" spacing="4"/>
+            </HBox>
+            <Label text="Events" styleClass="section-title"/>
+            <TableView fx:id="eventsTable">
+                <VBox.vgrow>
+                    <Priority fx:constant="ALWAYS"/>
+                </VBox.vgrow>
+            </TableView>
+        </VBox>
+
+        <VBox spacing="6" styleClass="pane-box">
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8"/>
+            </padding>
+            <Label text="Event details" styleClass="section-title"/>
+            <ScrollPane fx:id="detailsHolder" fitToWidth="true">
+                <VBox.vgrow>
+                    <Priority fx:constant="ALWAYS"/>
+                </VBox.vgrow>
+            </ScrollPane>
+        </VBox>
+
+    </items>
+</SplitPane>

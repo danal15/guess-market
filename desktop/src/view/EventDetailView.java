@@ -68,7 +68,7 @@ public final class EventDetailView {
         if (state.getPriceHistory().size() > 1) {
             box.getChildren().add(title("Price history"));
             box.getChildren().add(priceChart(state.getPriceHistory(),
-                    state.getOption1State().getName(), state.getOption2State().getName()));
+                    state.getOption1State().getName(), state.getOption2State().getName(), 1.0));
         }
         return box;
     }
@@ -119,7 +119,8 @@ public final class EventDetailView {
         if (state.getPriceHistory().size() > 1) {
             box.getChildren().add(title("Price history"));
             box.getChildren().add(priceChart(state.getPriceHistory(),
-                    state.getOption1Book().getOptionName(), state.getOption2Book().getOptionName()));
+                    state.getOption1Book().getOptionName(), state.getOption2Book().getOptionName(),
+                    state.getBaseValue()));
         }
         return box;
     }
@@ -177,15 +178,42 @@ public final class EventDetailView {
 
     // ---------------- shared bits ----------------
 
-    private static Node priceChart(List<PricePointDTO> history, String option1, String option2) {
-        NumberAxis x = new NumberAxis();
-        x.setLabel("Trades so far");
-        NumberAxis y = new NumberAxis();
+    /**
+     * @param maxPrice what one share pays if its option wins, so the scale is
+     *                 the whole range a price can take rather than whatever
+     *                 the data happens to span
+     */
+    private static Node priceChart(List<PricePointDTO> history, String option1, String option2,
+                                   double maxPrice) {
+        // Trades are counted in whole numbers, so the axis is stepped in whole
+        // numbers too - left to itself it labels them 0.1, 0.2 and so on.
+        int lastTrade = Math.max(1, history.size() - 1);
+        NumberAxis x = new NumberAxis(0, lastTrade, tickFor(lastTrade));
+        x.setLabel("Trades made");
+        x.setMinorTickCount(0);
+        x.setTickLabelFormatter(new javafx.util.StringConverter<Number>() {
+            @Override
+            public String toString(Number value) {
+                return String.valueOf(value.intValue());
+            }
+
+            @Override
+            public Number fromString(String text) {
+                return Integer.valueOf(text);
+            }
+        });
+
+        // A price runs from nothing to the full payout, and saying so keeps the
+        // two options readable as shares of one whole.
+        NumberAxis y = new NumberAxis(0, maxPrice, maxPrice / 4.0);
         y.setLabel("Price");
+        y.setMinorTickCount(0);
 
         LineChart<Number, Number> chart = new LineChart<>(x, y);
         chart.setPrefHeight(240);
-        chart.setCreateSymbols(false);
+        // With only a handful of trades the points matter more than the line,
+        // and a single point draws nothing at all without them.
+        chart.setCreateSymbols(history.size() <= 25);
         chart.setAnimated(false);
 
         XYChart.Series<Number, Number> first = new XYChart.Series<>();
@@ -199,6 +227,11 @@ public final class EventDetailView {
         chart.getData().add(first);
         chart.getData().add(second);
         return chart;
+    }
+
+    /** Keeps the number of labels on the axis sensible however long the event runs. */
+    private static int tickFor(int lastTrade) {
+        return Math.max(1, (int) Math.ceil(lastTrade / 10.0));
     }
 
     private static Label title(String text) {

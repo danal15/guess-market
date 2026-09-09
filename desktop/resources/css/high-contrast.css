@@ -115,6 +115,8 @@
 .chart-legend-item { -fx-text-fill: -ink; }
 .default-color0.chart-series-line { -fx-stroke: -accent; -fx-stroke-width: 3; }
 .default-color1.chart-series-line { -fx-stroke: #00d5ff; -fx-stroke-width: 3; }
+.default-color0.chart-legend-item-symbol, .default-color0.chart-line-symbol { -fx-background-color: -accent; }
+.default-color1.chart-legend-item-symbol, .default-color1.chart-line-symbol { -fx-background-color: #00d5ff; }
 
 /* dialogs */
 .dialog-pane { -fx-background-color: -page; -fx-border-color: -accent; -fx-border-width: 2; -fx-background-radius: 14; -fx-border-radius: 14; }

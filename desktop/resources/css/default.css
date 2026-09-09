@@ -187,6 +187,8 @@
 .chart-legend-item { -fx-text-fill: -ink; }
 .default-color0.chart-series-line { -fx-stroke: #6c5ce7; -fx-stroke-width: 2.5; }
 .default-color1.chart-series-line { -fx-stroke: #0e9fc4; -fx-stroke-width: 2.5; }
+.default-color0.chart-legend-item-symbol, .default-color0.chart-line-symbol { -fx-background-color: #6c5ce7; }
+.default-color1.chart-legend-item-symbol, .default-color1.chart-line-symbol { -fx-background-color: #0e9fc4; }
 
 /* dialogs */
 .dialog-pane {

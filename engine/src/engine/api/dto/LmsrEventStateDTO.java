@@ -2,7 +2,7 @@ package engine.api.dto;
 
 import java.util.List;
 
-public final class EventStateDTO {
+public final class LmsrEventStateDTO {
 
     private final EventDTO event;
     private final OptionStateDTO option1State;
@@ -11,10 +11,12 @@ public final class EventStateDTO {
     private final double totalCommissionCollected;
     private final List<TradeDTO> tradesNewestFirst;
     private final String winningOptionName;
+    private final List<PricePointDTO> priceHistory;
 
-    public EventStateDTO(EventDTO event, OptionStateDTO option1State, OptionStateDTO option2State,
-                          double accountBalance, double totalCommissionCollected,
-                          List<TradeDTO> tradesNewestFirst, String winningOptionName) {
+    public LmsrEventStateDTO(EventDTO event, OptionStateDTO option1State, OptionStateDTO option2State,
+                             double accountBalance, double totalCommissionCollected,
+                             List<TradeDTO> tradesNewestFirst, String winningOptionName,
+                             List<PricePointDTO> priceHistory) {
         this.event = event;
         this.option1State = option1State;
         this.option2State = option2State;
@@ -22,6 +24,7 @@ public final class EventStateDTO {
         this.totalCommissionCollected = totalCommissionCollected;
         this.tradesNewestFirst = tradesNewestFirst;
         this.winningOptionName = winningOptionName;
+        this.priceHistory = priceHistory;
     }
 
     public EventDTO getEvent() {
@@ -48,7 +51,12 @@ public final class EventStateDTO {
         return tradesNewestFirst;
     }
 
+    /** Null while the event is still open. */
     public String getWinningOptionName() {
         return winningOptionName;
+    }
+
+    public List<PricePointDTO> getPriceHistory() {
+        return priceHistory;
     }
 }

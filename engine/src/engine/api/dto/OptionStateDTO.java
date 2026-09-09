@@ -4,12 +4,12 @@ public final class OptionStateDTO {
 
     private final String name;
     private final double price;
-    private final long sharesBought;
+    private final long sharesOutstanding;
 
-    public OptionStateDTO(String name, double price, long sharesBought) {
+    public OptionStateDTO(String name, double price, long sharesOutstanding) {
         this.name = name;
         this.price = price;
-        this.sharesBought = sharesBought;
+        this.sharesOutstanding = sharesOutstanding;
     }
 
     public String getName() {
@@ -20,7 +20,7 @@ public final class OptionStateDTO {
         return price;
     }
 
-    public long getSharesBought() {
-        return sharesBought;
+    public long getSharesOutstanding() {
+        return sharesOutstanding;
     }
 }

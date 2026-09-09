@@ -1,102 +1,137 @@
 package engine.model;
 
-import engine.core.lmsr.LmsrMath;
+import engine.api.exception.TradingException;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Collection;
 
-public class Event implements Serializable {
+/**
+ * Base of every market event. Holds the identity, configuration, status,
+ * account and market maker that both trading methods share, and owns the
+ * open/close protocol. The method specific state and money movement live in
+ * the subclasses.
+ */
+public abstract class Event implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     private final int id;
     private final String name;
     private final String description;
     private final int commissionPercent;
     private final CommissionType commissionType;
-    private final int b;
+    private final String mmUserName;
     private final Option[] options;
     private final Account account;
     private double totalCommissionCollected;
-    private final List<Trade> trades;
     private EventStatus status;
     private Integer winningOptionIndex;
 
-    public Event(int id, String name, String description, int commissionPercent,
-                 CommissionType commissionType, int b, String option1Name, String option2Name) {
+    protected Event(int id, String name, String description, int commissionPercent,
+                    CommissionType commissionType, String mmUserName,
+                    String option1Name, String option2Name) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.commissionPercent = commissionPercent;
         this.commissionType = commissionType;
-        this.b = b;
+        this.mmUserName = mmUserName;
         this.options = new Option[] { new Option(option1Name), new Option(option2Name) };
         this.account = new Account();
         this.totalCommissionCollected = 0.0;
-        this.trades = new ArrayList<>();
-        this.status = EventStatus.ACTIVE;
+        this.status = EventStatus.NOT_STARTED;
         this.winningOptionIndex = null;
     }
 
-    public double priceOf(int optionIndex) {
-        checkIndex(optionIndex);
-        int other = 1 - optionIndex;
-        return LmsrMath.price(options[optionIndex].getSharesBought(), options[other].getSharesBought(), b);
+    public abstract EventMethod getMethod();
+
+    /** How much the market maker must have in hand to open this event. */
+    public abstract double requiredOpeningFunds();
+
+    /** Moves the market maker's money into the event; called only by open(). */
+    protected abstract void fundOpening(User marketMaker);
+
+    /** Pays out the winners; called only by close(). */
+    protected abstract void resolve(int winningIndex, Collection<User> allUsers, User marketMaker);
+
+    public void open(User marketMaker) {
+        requireMarketMaker(marketMaker);
+        marketMaker.requireActive();
+        if (status != EventStatus.NOT_STARTED) {
+            throw new TradingException("Event '" + name + "' has already been started.");
+        }
+        double needed = requiredOpeningFunds();
+        if (!marketMaker.canAfford(needed)) {
+            throw new TradingException(String.format(
+                    "%s cannot open '%s': it requires %.2f but the account holds only %.2f.",
+                    marketMaker.getName(), name, needed, marketMaker.getAccount().getBalance()));
+        }
+        fundOpening(marketMaker);
+        status = EventStatus.ACTIVE;
     }
 
-    /** Buys shares of one option; returns {sharesCost, commissionPaid, totalPaid}. */
-    public double[] buy(int optionIndex, long quantity) {
-        checkIndex(optionIndex);
+    public void close(User marketMaker, int winningIndex, Collection<User> allUsers) {
+        requireMarketMaker(marketMaker);
+        checkOptionIndex(winningIndex);
         if (status != EventStatus.ACTIVE) {
-            throw new IllegalStateException("Event '" + name + "' is not active - trading is closed.");
+            throw new TradingException("Event '" + name + "' is not active, so it cannot be closed.");
         }
-        if (quantity < 1) {
-            throw new IllegalArgumentException("Quantity must be at least 1.");
-        }
-
-        long qYes = options[0].getSharesBought();
-        long qNo = options[1].getSharesBought();
-        double before = LmsrMath.cost(qYes, qNo, b);
-        long afterYes = optionIndex == 0 ? qYes + quantity : qYes;
-        long afterNo = optionIndex == 1 ? qNo + quantity : qNo;
-        double after = LmsrMath.cost(afterYes, afterNo, b);
-        double sharesCost = after - before;
-        double commission = commissionType == CommissionType.ON_PURCHASE
-                ? sharesCost * commissionPercent / 100.0
-                : 0.0;
-
-        options[optionIndex].addShares(quantity);
-        account.deposit(sharesCost + commission);
-        totalCommissionCollected += commission;
-        trades.add(new Trade(options[optionIndex].getName(), quantity, sharesCost, commission));
-
-        return new double[] { sharesCost, commission, sharesCost + commission };
-    }
-
-    /**
-     * Closes the event, declaring a winning option. Per the lecturer's forum
-     * correction the account is NOT reset afterward — its final value (which
-     * may be negative) is left as-is to show the market maker's net result.
-     */
-    public void close(int winningIndex) {
-        checkIndex(winningIndex);
-        if (status != EventStatus.ACTIVE) {
-            throw new IllegalStateException("Event '" + name + "' is already closed.");
-        }
-        long winningShares = options[winningIndex].getSharesBought();
-        double payoutBase = winningShares * 1.0;
-        double fee = commissionType == CommissionType.ON_CLOSE
-                ? payoutBase * commissionPercent / 100.0
-                : 0.0;
-        totalCommissionCollected += fee;
-        account.withdraw(payoutBase - fee);
+        resolve(winningIndex, allUsers, marketMaker);
         winningOptionIndex = winningIndex;
         status = EventStatus.CLOSED;
     }
 
-    private void checkIndex(int optionIndex) {
+    public void requireActiveForTrading() {
+        if (status != EventStatus.ACTIVE) {
+            throw new TradingException("Event '" + name + "' is " + status.getLabel().toLowerCase()
+                    + ", so no trading is possible.");
+        }
+    }
+
+    public boolean isMarketMaker(String userName) {
+        return mmUserName.equals(userName);
+    }
+
+    protected void requireMarketMaker(User user) {
+        if (!isMarketMaker(user.getName())) {
+            throw new TradingException("Only " + mmUserName + ", the market maker of '" + name
+                    + "', can perform this action.");
+        }
+    }
+
+    /**
+     * Charges the on-purchase commission to a buyer and hands it to the market
+     * maker. Does nothing when the event collects its commission on close.
+     * Returns the amount actually charged.
+     */
+    public double applyPurchaseCommission(User buyer, User marketMaker, Holding buyerHolding, double tradeValue) {
+        if (getCommissionType() != CommissionType.ON_PURCHASE) {
+            return 0.0;
+        }
+        double fee = commissionOn(tradeValue);
+        if (fee <= 0) {
+            return 0.0;
+        }
+        buyer.pay(fee);
+        buyerHolding.addCommission(fee);
+        creditCommission(marketMaker, fee);
+        return fee;
+    }
+
+    /** Credits commission to the market maker and records it on the event. */
+    protected void creditCommission(User marketMaker, double amount) {
+        if (amount <= 0) {
+            return;
+        }
+        marketMaker.receive(amount);
+        totalCommissionCollected += amount;
+    }
+
+    protected double commissionOn(double amount) {
+        return amount * commissionPercent / 100.0;
+    }
+
+    protected void checkOptionIndex(int optionIndex) {
         if (optionIndex != 0 && optionIndex != 1) {
             throw new IllegalArgumentException("Option index must be 0 or 1, got: " + optionIndex);
         }
@@ -122,12 +157,12 @@ public class Event implements Serializable {
         return commissionType;
     }
 
-    public int getB() {
-        return b;
+    public String getMarketMakerName() {
+        return mmUserName;
     }
 
     public Option getOption(int index) {
-        checkIndex(index);
+        checkOptionIndex(index);
         return options[index];
     }
 
@@ -137,10 +172,6 @@ public class Event implements Serializable {
 
     public double getTotalCommissionCollected() {
         return totalCommissionCollected;
-    }
-
-    public List<Trade> getTrades() {
-        return Collections.unmodifiableList(trades);
     }
 
     public EventStatus getStatus() {

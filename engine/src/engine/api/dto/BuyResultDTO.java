@@ -5,12 +5,17 @@ public final class BuyResultDTO {
     private final double sharesCost;
     private final double commissionPaid;
     private final double totalPaid;
-    private final EventStateDTO afterState;
+    private final double newBalance;
+    private final boolean blockedNow;
+    private final LmsrEventStateDTO afterState;
 
-    public BuyResultDTO(double sharesCost, double commissionPaid, double totalPaid, EventStateDTO afterState) {
+    public BuyResultDTO(double sharesCost, double commissionPaid, double totalPaid,
+                        double newBalance, boolean blockedNow, LmsrEventStateDTO afterState) {
         this.sharesCost = sharesCost;
         this.commissionPaid = commissionPaid;
         this.totalPaid = totalPaid;
+        this.newBalance = newBalance;
+        this.blockedNow = blockedNow;
         this.afterState = afterState;
     }
 
@@ -26,7 +31,15 @@ public final class BuyResultDTO {
         return totalPaid;
     }
 
-    public EventStateDTO getAfterState() {
+    public double getNewBalance() {
+        return newBalance;
+    }
+
+    public boolean isBlockedNow() {
+        return blockedNow;
+    }
+
+    public LmsrEventStateDTO getAfterState() {
         return afterState;
     }
 }

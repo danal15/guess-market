@@ -2,27 +2,56 @@ package engine.api;
 
 import engine.api.dto.BuyResultDTO;
 import engine.api.dto.EventDTO;
-import engine.api.dto.EventStateDTO;
+import engine.api.dto.EventFilterDTO;
+import engine.api.dto.LmsrEventStateDTO;
+import engine.api.dto.NewEventRequestDTO;
+import engine.api.dto.OrderBookEventStateDTO;
+import engine.api.dto.OrderResultDTO;
+import engine.api.dto.UserDTO;
+import engine.api.dto.UserEventInvolvementDTO;
+import engine.model.OrderSide;
 
 import java.util.List;
 
+/**
+ * Everything a user interface can ask of the system. Option indexes are
+ * zero based on this boundary; the interface never sees engine internals,
+ * only immutable data transfer objects.
+ */
 public interface GMEngine {
 
     void loadMarketFile(String path);
 
     boolean isLoaded();
 
-    List<EventDTO> getEvents();
+    String getLoadedFilePath();
 
-    List<EventDTO> getActiveEvents();
+    List<EventDTO> getEvents(EventFilterDTO filter);
 
-    EventStateDTO getEventState(int eventId);
+    EventDTO getEvent(int eventId);
 
-    BuyResultDTO buyShares(int eventId, int optionIndex, long quantity);
+    LmsrEventStateDTO getLmsrEventState(int eventId);
 
-    EventStateDTO closeEvent(int eventId, int winningOptionIndex);
+    OrderBookEventStateDTO getOrderBookEventState(int eventId);
 
-    void saveState(String pathWithoutExtension);
+    List<UserDTO> getUsers();
 
-    void loadState(String pathWithoutExtension);
+    UserDTO getUser(String userName);
+
+    List<EventDTO> getUserEvents(String userName);
+
+    UserEventInvolvementDTO getUserInvolvement(String userName, int eventId);
+
+    List<Double> getUserBalanceHistory(String userName);
+
+    void openEvent(int eventId, String actingUserName);
+
+    void closeEvent(int eventId, String actingUserName, int winningOptionIndex);
+
+    BuyResultDTO buyLmsrShares(int eventId, String userName, int optionIndex, long quantity);
+
+    OrderResultDTO placeOrder(int eventId, String userName, int optionIndex,
+                              OrderSide side, double price, long quantity);
+
+    EventDTO createEvent(NewEventRequestDTO request, String creatorUserName);
 }

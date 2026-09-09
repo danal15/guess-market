@@ -9,7 +9,11 @@ public class Account implements Serializable {
     private double balance;
 
     public Account() {
-        this.balance = 0.0;
+        this(0.0);
+    }
+
+    public Account(double initialBalance) {
+        this.balance = initialBalance;
     }
 
     public void deposit(double amount) {

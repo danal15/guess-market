@@ -1,13 +1,12 @@
 package engine.model;
 
-public enum EventStatus {
-    NOT_STARTED("Not started"),
-    ACTIVE("Active"),
-    CLOSED("Closed");
+public enum EventMethod {
+    LMSR("LMSR"),
+    ORDER_BOOK("Order Book");
 
     private final String label;
 
-    EventStatus(String label) {
+    EventMethod(String label) {
         this.label = label;
     }
 

@@ -43,10 +43,8 @@ public final class Dialogs {
     private static Alert base(Alert.AlertType type, String header) {
         Alert alert = new Alert(type);
         alert.setTitle("Guess Market");
-        alert.setHeaderText(header);
         alert.setResizable(true);
-        alert.setGraphic(badge(type));
-        SkinManager.style(alert.getDialogPane());
+        DialogChrome.apply(alert, header, badge(type));
         return alert;
     }
 

@@ -118,15 +118,25 @@
 
 /* dialogs */
 .dialog-pane { -fx-background-color: -page; -fx-border-color: -accent; -fx-border-width: 2; -fx-background-radius: 14; -fx-border-radius: 14; }
-.dialog-pane .header-panel {
+.dialog-pane .dialog-header {
     -fx-background-color: -raised; -fx-background-radius: 14 14 0 0;
     -fx-border-color: transparent transparent -accent transparent; -fx-border-width: 0 0 2 0;
-    -fx-padding: 16 20 16 20;
 }
-.dialog-pane .header-panel .label { -fx-text-fill: -accent; -fx-font-size: 17px; -fx-font-weight: bold; }
+.dialog-pane .dialog-title-bar { -fx-padding: 8 8 2 18; }
+.dialog-pane .dialog-header .dialog-app-name { -fx-text-fill: -ink-muted; -fx-font-size: 13px; }
+.dialog-pane .dialog-close {
+    -fx-background-color: -page; -fx-border-color: -accent; -fx-border-width: 2;
+    -fx-text-fill: -accent; -fx-font-size: 14px; -fx-padding: 1 8 1 8;
+    -fx-background-radius: 8; -fx-border-radius: 8; -fx-cursor: hand;
+}
+.dialog-pane .dialog-close:hover { -fx-background-color: -bad; -fx-text-fill: -accent-ink; -fx-border-color: -bad; }
+.dialog-pane .dialog-headline-row { -fx-padding: 2 20 16 18; -fx-spacing: 12; }
+.dialog-pane .dialog-header .dialog-headline {
+    -fx-text-fill: -accent; -fx-font-size: 17px; -fx-font-weight: bold;
+}
 .dialog-pane .content, .dialog-pane .content.label, .dialog-pane .label { -fx-text-fill: -ink; }
 .dialog-pane .content { -fx-padding: 18 22 6 22; }
-.dialog-pane .header-panel .dialog-badge {
+.dialog-pane .dialog-header .dialog-badge {
     -fx-background-radius: 18; -fx-font-size: 19px; -fx-font-weight: bold;
     -fx-text-fill: -accent-ink;
 }

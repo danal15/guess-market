@@ -335,10 +335,9 @@ public final class TradeForms {
     private static Dialog<ButtonType> baseDialog(String title, String eventName) {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(title);
-        dialog.setHeaderText(eventName);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         ButtonBar.setButtonData(dialog.getDialogPane().lookupButton(ButtonType.OK), ButtonBar.ButtonData.OK_DONE);
-        SkinManager.style(dialog.getDialogPane());
+        util.DialogChrome.apply(dialog, eventName, null);
         return dialog;
     }
 

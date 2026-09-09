@@ -24,9 +24,9 @@ public final class CreateEventDialog {
     public static NewEventRequestDTO show(String ownerName) {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Create a new event");
-        dialog.setHeaderText(ownerName + " will be the market maker of this event.");
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        SkinManager.style(dialog.getDialogPane());
+        util.DialogChrome.apply(dialog,
+                ownerName + " will be the market maker of this event.", null);
 
         TextField name = new TextField();
         TextArea description = new TextArea();

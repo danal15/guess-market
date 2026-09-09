@@ -17,7 +17,8 @@ public final class SkinManager {
     public enum Skin {
         DEFAULT("Default", "/css/default.css"),
         DARK("Dark", "/css/dark.css"),
-        HIGH_CONTRAST("High contrast", "/css/high-contrast.css");
+        HIGH_CONTRAST("High contrast", "/css/high-contrast.css"),
+        AURORA("Aurora", "/css/aurora.css");
 
         private final String label;
         private final String resource;

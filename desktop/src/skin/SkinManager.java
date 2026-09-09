@@ -15,10 +15,9 @@ import java.net.URL;
 public final class SkinManager {
 
     public enum Skin {
-        DEFAULT("Default", "/css/default.css"),
+        DEFAULT("Light", "/css/default.css"),
         DARK("Dark", "/css/dark.css"),
-        HIGH_CONTRAST("High contrast", "/css/high-contrast.css"),
-        AURORA("Aurora", "/css/aurora.css");
+        HIGH_CONTRAST("High contrast", "/css/high-contrast.css");
 
         private final String label;
         private final String resource;

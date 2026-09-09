@@ -21,7 +21,11 @@ import java.io.File;
 
 public class RootController {
 
+    private static final String STATE_SUFFIX = ".gmstate";
+
     @FXML private Button loadButton;
+    @FXML private Button saveStateButton;
+    @FXML private Button loadStateButton;
     @FXML private TextField filePathField;
     @FXML private ProgressBar progressBar;
     @FXML private Label progressLabel;
@@ -90,6 +94,75 @@ public class RootController {
         startLoad(chosen.getAbsolutePath());
     }
 
+    /**
+     * Writes everything that has happened so far to a file. The market is saved
+     * whole, so the trades, the resting orders and the closed events all come
+     * back exactly as they were left.
+     */
+    @FXML
+    private void onSaveState() {
+        if (engine == null || !engine.isLoaded()) {
+            Dialogs.error("Nothing to save", "Load a market file before saving progress.");
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Save progress");
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Guess Market progress", "*" + STATE_SUFFIX));
+        chooser.setInitialFileName("guess-market-progress" + STATE_SUFFIX);
+        if (lastDirectory != null && lastDirectory.isDirectory()) {
+            chooser.setInitialDirectory(lastDirectory);
+        }
+        File chosen = chooser.showSaveDialog(windowOf(saveStateButton));
+        if (chosen == null) {
+            return;
+        }
+        lastDirectory = chosen.getParentFile();
+        try {
+            engine.saveState(withoutSuffix(chosen));
+            Dialogs.info("Progress saved", "The market was saved to " + chosen.getName() + ".");
+        } catch (RuntimeException e) {
+            Dialogs.error("Could not save", String.valueOf(e.getMessage()));
+        }
+    }
+
+    /** Replaces whatever is loaded with a market saved earlier. */
+    @FXML
+    private void onLoadState() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Load progress");
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Guess Market progress", "*" + STATE_SUFFIX));
+        if (lastDirectory != null && lastDirectory.isDirectory()) {
+            chooser.setInitialDirectory(lastDirectory);
+        }
+        File chosen = chooser.showOpenDialog(windowOf(loadStateButton));
+        if (chosen == null) {
+            return;
+        }
+        lastDirectory = chosen.getParentFile();
+        try {
+            engine.loadState(withoutSuffix(chosen));
+            filePathField.setText(chosen.getAbsolutePath());
+            refreshAll();
+            Dialogs.info("Progress loaded", "Picked up where " + chosen.getName() + " left off.");
+        } catch (RuntimeException e) {
+            Dialogs.error("Could not load", String.valueOf(e.getMessage()));
+        }
+    }
+
+    /** The engine adds the suffix itself, so it must not be handed one twice. */
+    private String withoutSuffix(File file) {
+        String path = file.getAbsolutePath();
+        return path.endsWith(STATE_SUFFIX)
+                ? path.substring(0, path.length() - STATE_SUFFIX.length())
+                : path;
+    }
+
+    private Window windowOf(Button button) {
+        return button.getScene() == null ? null : button.getScene().getWindow();
+    }
+
     /** The samples that ship beside the jar, so the first load has somewhere to start. */
     private File defaultDirectory() {
         File samples = new File(System.getProperty("user.dir"), "sample-files");
@@ -147,6 +220,10 @@ public class RootController {
 
     private void setBusy(boolean busy) {
         loadButton.setDisable(busy);
+        // Saving or reloading in the middle of a load would work on a market
+        // that is being replaced underneath it.
+        saveStateButton.setDisable(busy);
+        loadStateButton.setDisable(busy);
         tabPane.setDisable(busy);
     }
 

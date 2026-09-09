@@ -21,6 +21,7 @@ import util.Dialogs;
 import util.Format;
 import util.Tables;
 import view.CreateEventDialog;
+import view.BalanceChartView;
 import view.EventDetailView;
 import view.TradeForms;
 import view.UserInvolvementView;
@@ -39,6 +40,7 @@ public class UsersTabController {
     private Runnable onChanged = () -> { };
     /** Remembered so acting on an event does not silently collapse the pane again. */
     private boolean fullDetailsExpanded;
+    private boolean balanceChartExpanded = true;
 
     @FXML
     private void initialize() {
@@ -157,6 +159,16 @@ public class UsersTabController {
         onEventSelected(userEventsTable.getSelectionModel().getSelectedItem());
     }
 
+    /** The user's account over time, in a pane that remembers being folded away. */
+    private TitledPane balancePane(UserDTO user) {
+        TitledPane pane = new TitledPane("Balance history for " + user.getName(),
+                BalanceChartView.build(user.getName(),
+                        engine.getUserBalanceHistory(user.getName())));
+        pane.setExpanded(balanceChartExpanded);
+        pane.expandedProperty().addListener((obs, old, expanded) -> balanceChartExpanded = expanded);
+        return pane;
+    }
+
     private void setBlocked(boolean blocked) {
         blockedLabel.setText(blocked ? "Blocked" : "");
         blockedLabel.setVisible(blocked);
@@ -170,13 +182,22 @@ public class UsersTabController {
         actionBar.getChildren().clear();
         UserDTO user = usersTable.getSelectionModel().getSelectedItem();
         if (user == null || event == null) {
-            userDetailsHolder.setContent(new Label("Select one of this user's events."));
+            VBox empty = new VBox(10);
+            empty.getChildren().add(new Label("Select one of this user's events."));
+            if (user != null) {
+                empty.getChildren().add(balancePane(user));
+            }
+            userDetailsHolder.setContent(empty);
             return;
         }
 
         VBox content = new VBox(10);
         UserEventInvolvementDTO involvement = engine.getUserInvolvement(user.getName(), event.getId());
         content.getChildren().add(UserInvolvementView.build(involvement));
+
+        // The account chart belongs to the user rather than to the event, so it
+        // stays on screen whichever of their events is being looked at.
+        content.getChildren().add(balancePane(user));
 
         // The full event view is available but collapsed, so the part that is
         // about this user stays visible without scrolling.

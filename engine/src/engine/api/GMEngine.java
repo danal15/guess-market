@@ -25,6 +25,12 @@ public interface GMEngine {
 
     void loadMarketFile(String path);
 
+    /** Writes the whole market to a file so it can be picked up again later. */
+    void saveState(String pathWithoutExtension);
+
+    /** Replaces the loaded market with one written by saveState. */
+    void loadState(String pathWithoutExtension);
+
     boolean isLoaded();
 
     String getLoadedFilePath();

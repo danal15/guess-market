@@ -22,6 +22,7 @@ import engine.api.dto.TradeDTO;
 import engine.api.dto.UserDTO;
 import engine.api.dto.UserEventInvolvementDTO;
 import engine.api.exception.TradingException;
+import engine.api.exception.StatePersistenceException;
 import engine.core.ob.OrderMatcher;
 import engine.core.ob.OrderOutcome;
 import engine.core.xml.MarketFileLoader;
@@ -44,6 +45,8 @@ import java.util.List;
 
 public class GuessMarketEngine implements GMEngine {
 
+    private static final String STATE_FILE_EXTENSION = ".gmstate";
+
     private Market market;
     private String loadedFilePath;
 
@@ -54,6 +57,52 @@ public class GuessMarketEngine implements GMEngine {
         Market loaded = MarketFileLoader.load(path);
         this.market = loaded;
         this.loadedFilePath = path;
+    }
+
+    @Override
+    public void saveState(String pathWithoutExtension) {
+        requireLoaded();
+        java.io.File target = new java.io.File(requirePath(pathWithoutExtension) + STATE_FILE_EXTENSION);
+        java.io.File folder = target.getAbsoluteFile().getParentFile();
+        if (folder != null && !folder.exists()) {
+            throw new StatePersistenceException("Cannot save: the folder " + folder + " does not exist.");
+        }
+        try (java.io.ObjectOutputStream out =
+                     new java.io.ObjectOutputStream(new java.io.FileOutputStream(target))) {
+            out.writeObject(market);
+        } catch (java.io.IOException e) {
+            throw new StatePersistenceException("Could not save to " + target + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void loadState(String pathWithoutExtension) {
+        java.io.File source = new java.io.File(requirePath(pathWithoutExtension) + STATE_FILE_EXTENSION);
+        if (!source.exists() || !source.isFile()) {
+            throw new StatePersistenceException("No saved market exists at: " + source);
+        }
+        Object loaded;
+        try (java.io.ObjectInputStream in =
+                     new java.io.ObjectInputStream(new java.io.FileInputStream(source))) {
+            loaded = in.readObject();
+        } catch (java.io.InvalidClassException e) {
+            throw new StatePersistenceException(
+                    "The file " + source + " was saved by a different version of this program.");
+        } catch (java.io.IOException | ClassNotFoundException e) {
+            throw new StatePersistenceException(
+                    "The file " + source + " is not a saved market: " + e.getMessage());
+        }
+        if (!(loaded instanceof Market)) {
+            throw new StatePersistenceException("The file " + source + " is not a saved market.");
+        }
+        this.market = (Market) loaded;
+    }
+
+    private String requirePath(String path) {
+        if (path == null || path.trim().isEmpty()) {
+            throw new StatePersistenceException("No file path was given.");
+        }
+        return path.trim();
     }
 
     @Override

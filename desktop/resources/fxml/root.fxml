@@ -28,6 +28,8 @@
             <Label text="Guess Market" styleClass="app-title"/>
             <Separator orientation="VERTICAL"/>
             <Button fx:id="loadButton" text="Load File" onAction="#onLoadFile"/>
+            <Button fx:id="saveStateButton" text="Save Progress" onAction="#onSaveState"/>
+            <Button fx:id="loadStateButton" text="Load Progress" onAction="#onLoadState"/>
             <TextField fx:id="filePathField" editable="false" promptText="No file loaded">
                 <HBox.hgrow>
                     <Priority fx:constant="ALWAYS"/>

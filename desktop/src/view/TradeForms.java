@@ -205,22 +205,7 @@ public final class TradeForms {
 
                 // An order book needs somebody on the other side. Say so up
                 // front, so a resting order is never mistaken for a bet.
-                String otherSide = quote.isBuying() ? "selling" : "buying";
-                if (quote.isWouldTradeNow()) {
-                    noteLine.setText("This will trade straight away against "
-                            + Format.price(quote.getBestOpposingPrice()) + ". "
-                            + (quote.isBuying()
-                                    ? "The amounts above are the most you could pay."
-                                    : "The amounts above are the least you could receive."));
-                } else if (quote.getBestOpposingPrice() == null) {
-                    noteLine.setText("Nobody is " + otherSide + " this option right now, so your order will"
-                            + " wait in the book until somebody does. No money moves until it trades.");
-                } else {
-                    noteLine.setText("The best price on the other side is "
-                            + Format.price(quote.getBestOpposingPrice())
-                            + ", so your order will wait in the book until it is matched."
-                            + " No money moves until it trades.");
-                }
+                noteLine.setText(marketNote(quote));
 
                 StringBuilder problem = new StringBuilder();
                 if (!quote.isPriceValid()) {
@@ -353,6 +338,44 @@ public final class TradeForms {
      * its background and read as a stray mark. It only takes up room while it
      * has something to say.
      */
+    /**
+     * An order book needs somebody on the other side, so the form says what is
+     * actually on offer rather than only whether the order would trade. The
+     * figures quoted are the keenest available: the cheapest shares to buy, or
+     * the highest bid to sell into.
+     */
+    static String marketNote(OrderQuoteDTO quote) {
+        Double best = quote.getBestOpposingPrice();
+        long available = quote.getAvailableNow();
+
+        if (best == null || available <= 0) {
+            return quote.isBuying()
+                    ? "Nobody is selling this option right now, and nobody is bidding enough on the"
+                            + " other one to create new shares. Your order will wait in the book"
+                            + " until somebody does. No money moves until it trades."
+                    : "Nobody is bidding for this option right now, so your order will wait in the"
+                            + " book until somebody does. No money moves until it trades.";
+        }
+
+        String offer = quote.isBuying()
+                ? String.format("You can buy %d %s now at %s each.",
+                        available, available == 1 ? "share" : "shares", Format.money(best))
+                : String.format("You can sell %d %s now at %s each.",
+                        available, available == 1 ? "share" : "shares", Format.money(best));
+
+        if (quote.isWouldTradeNow()) {
+            return offer + " Your order trades immediately at that price"
+                    + (quote.isBuying()
+                            ? ", so the amounts above are the most you could pay."
+                            : ", so the amounts above are the least you could receive.");
+        }
+        return offer + (quote.isBuying()
+                ? " Your price is below that, so your order waits in the book until somebody"
+                        + " accepts it. Raise it to " + Format.money(best) + " to trade at once."
+                : " Your price is above that, so your order waits in the book until somebody"
+                        + " accepts it. Lower it to " + Format.money(best) + " to trade at once.");
+    }
+
     private static Label warningLabel() {
         Label label = new Label();
         label.getStyleClass().add("blocked-label");

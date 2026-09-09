@@ -286,24 +286,74 @@ public class GuessMarketEngine implements GMEngine {
         boolean priceValid = price >= 0.01 - 1e-9 && price <= maxPrice + 1e-9
                 && Math.abs(price * 100 - Math.round(price * 100)) <= 1e-6;
 
-        // Whether this order would trade at once, or simply wait in the book.
-        Order opposing = buying
-                ? event.book(optionIndex).bestAsk()
-                : event.book(optionIndex).bestBid();
-        Double opposingPrice = opposing == null ? null : opposing.getPrice();
-        boolean wouldTrade = opposing != null
-                && (buying ? opposing.getPrice() <= price + 1e-9 : opposing.getPrice() >= price - 1e-9);
-        if (!wouldTrade && buying && event.isAllowMint()) {
-            Order otherSideBid = event.book(1 - optionIndex).bestBid();
-            wouldTrade = otherSideBid != null
-                    && otherSideBid.getPrice() + price >= event.getD() - 1e-9;
-        }
+        // The best deal on offer right now, and how much of it there is.
+        double[] best = bestAvailable(event, optionIndex, buying);
+        Double opposingPrice = best == null ? null : best[0];
+        long availableQuantity = best == null ? 0L : (long) best[1];
+        boolean wouldTrade = best != null
+                && (buying ? best[0] <= price + 1e-9 : best[0] >= price - 1e-9);
 
         return new OrderQuoteDTO(buying, orderValue, commission, total,
                 trader.getAccount().getBalance(), held,
                 !buying || trader.canAfford(total),
                 buying || held >= quantity,
-                maxPrice, priceValid, opposingPrice, wouldTrade);
+                maxPrice, priceValid, opposingPrice, wouldTrade, availableQuantity);
+    }
+
+    /**
+     * The keenest price a trader could get right now and how many shares are
+     * there at it, as {price, quantity}, or null when the other side is empty.
+     *
+     * A buyer can be served two ways: by an ask on the same option, or - when
+     * the event allows minting - by a bid on the opposite option, which costs
+     * the rest of the base value. The higher that opposite bid, the less the
+     * buyer pays, so the two sources have to be compared rather than simply
+     * taking the top of one book.
+     */
+    private double[] bestAvailable(OrderBookEvent event, int optionIndex, boolean buying) {
+        double bestPrice = buying ? Double.MAX_VALUE : -1.0;
+        long quantity = 0;
+
+        if (buying) {
+            for (Order ask : event.book(optionIndex).getAsks()) {
+                bestPrice = Math.min(bestPrice, ask.getPrice());
+            }
+            if (event.isAllowMint()) {
+                for (Order bid : event.book(1 - optionIndex).getBids()) {
+                    bestPrice = Math.min(bestPrice, event.getD() - bid.getPrice());
+                }
+            }
+            if (bestPrice == Double.MAX_VALUE) {
+                return null;
+            }
+            for (Order ask : event.book(optionIndex).getAsks()) {
+                if (Math.abs(ask.getPrice() - bestPrice) < 1e-9) {
+                    quantity += ask.getRemainingQuantity();
+                }
+            }
+            if (event.isAllowMint()) {
+                for (Order bid : event.book(1 - optionIndex).getBids()) {
+                    if (Math.abs((event.getD() - bid.getPrice()) - bestPrice) < 1e-9) {
+                        quantity += bid.getRemainingQuantity();
+                    }
+                }
+            }
+        } else {
+            // A seller can only meet a bid on the same option; minting is a
+            // way of creating shares, not of disposing of them.
+            for (Order bid : event.book(optionIndex).getBids()) {
+                bestPrice = Math.max(bestPrice, bid.getPrice());
+            }
+            if (bestPrice < 0) {
+                return null;
+            }
+            for (Order bid : event.book(optionIndex).getBids()) {
+                if (Math.abs(bid.getPrice() - bestPrice) < 1e-9) {
+                    quantity += bid.getRemainingQuantity();
+                }
+            }
+        }
+        return new double[] { bestPrice, quantity };
     }
 
     @Override

@@ -15,3 +15,6 @@
 Thumbs.db
 .DS_Store
 ~$*
+
+# Planning docs - local only
+*IMPLEMENTATION-PLAN.md

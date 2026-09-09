@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Guess-Market xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="GM-EX2-Schema.xsd">
+	<GM-events>
+		<GM-event name="Mujtaba is Dead">
+			<id>1</id>
+			<description>This event gambles if Mujtaba is a live or not. it will be determined if he will be shown in public until 31.8.26</description>
+			<commission type="on-purchase">5</commission>
+			<GM-options>
+				<GM-option>Hell Yea !</GM-option>
+				<GM-option>No way !</GM-option>
+			</GM-options>
+			<GM-method>
+				<GM-LMSR>
+					<b>100</b>
+				</GM-LMSR>
+			</GM-method>
+		</GM-event>
+		<GM-event name="World Cap Winner">
+			<id>2</id>
+			<description>Who do you think will win the world cap ?</description>
+			<commission type="on-close">15</commission>
+			<GM-options>
+				<GM-option>Argentina</GM-option>
+				<GM-option>Spain</GM-option>
+			</GM-options>
+			<GM-method>
+				<GM-order-book allow-mint="true" initial="100" d="1"/>
+			</GM-method>
+		</GM-event>
+		<GM-event name="Earth Quake on Dead Sea">
+			<id>3</id>
+			<description>Will there be an earth quake on the dead sea until the December 31th 2026</description>
+			<commission type="on-purchase">50</commission>
+			<GM-options>
+				<GM-option>Yes</GM-option>
+				<GM-option>No</GM-option>
+			</GM-options>
+			<GM-method>
+				<GM-order-book allow-mint="false" initial="1000" d="1"/>
+			</GM-method>
+		</GM-event>
+		<GM-event name="Will it rain tomorrow ?">
+			<id>4</id>
+			<description>Will there be 30 mm of rain tomorrow at Alenbi 283 st by 12:00 PM ?</description>
+			<commission type="on-close">10</commission>
+			<GM-options>
+				<GM-option>Yes</GM-option>
+				<GM-option>No</GM-option>
+			</GM-options>
+			<GM-method>
+				<GM-LMSR>
+					<b>200</b>
+				</GM-LMSR>
+			</GM-method>
+		</GM-event>
+	</GM-events>
+	<GM-users>
+		<GM-user name="Avrum">
+			<initial-cash>0</initial-cash>
+			<GM-market-maker>
+				<event id="2"/>
+			</GM-market-maker>
+		</GM-user>
+		<GM-user name="Tikva">
+			<initial-cash>10000</initial-cash>
+			<GM-market-maker>
+				<event id="1"/>
+				<event id="4"/>
+				<event id="3"/>
+			</GM-market-maker>
+		</GM-user>
+		<GM-user name="Menash">
+			<initial-cash>100</initial-cash>
+		</GM-user>
+	</GM-users>
+</Guess-Market>

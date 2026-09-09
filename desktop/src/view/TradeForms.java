@@ -5,6 +5,7 @@ import engine.api.dto.BuyResultDTO;
 import engine.api.dto.EventDTO;
 import engine.api.dto.FillDTO;
 import engine.api.dto.OrderResultDTO;
+import engine.api.dto.PurchaseQuoteDTO;
 import engine.model.OrderSide;
 import javafx.geometry.Insets;
 import javafx.scene.control.ButtonBar;
@@ -36,10 +37,58 @@ public final class TradeForms {
         option.getSelectionModel().selectFirst();
         TextField quantity = new TextField("10");
 
+        Label costLine = new Label();
+        Label feeLine = new Label();
+        Label totalLine = new Label();
+        totalLine.getStyleClass().add("section-title");
+        Label afterLine = new Label();
+        Label warningLine = new Label();
+        warningLine.getStyleClass().add("blocked-label");
+
         GridPane grid = grid();
         grid.addRow(0, new Label("Option:"), option);
         grid.addRow(1, new Label("Quantity:"), quantity);
+        grid.addRow(2, new Label("Shares cost:"), costLine);
+        grid.addRow(3, new Label("Commission:"), feeLine);
+        grid.addRow(4, new Label("Total to pay:"), totalLine);
+        grid.addRow(5, new Label("Price afterwards:"), afterLine);
+        grid.add(warningLine, 0, 6, 2, 1);
         dialog.getDialogPane().setContent(grid);
+
+        // The price comes out of a formula, so it is recalculated live as the
+        // quantity or the option changes - never a surprise after confirming.
+        Runnable updateQuote = () -> {
+            Long amount = tryParseLong(quantity.getText());
+            if (amount == null || amount < 1) {
+                costLine.setText("-");
+                feeLine.setText("-");
+                totalLine.setText("-");
+                afterLine.setText("-");
+                warningLine.setText(quantity.getText().trim().isEmpty()
+                        ? "" : "Enter a whole number of 1 or more.");
+                return;
+            }
+            try {
+                PurchaseQuoteDTO quote = engine.quoteLmsrPurchase(
+                        event.getId(), userName, option.getSelectionModel().getSelectedIndex(), amount);
+                costLine.setText(Format.money(quote.getSharesCost())
+                        + "   (" + Format.money(quote.getAveragePricePerShare()) + " per share)");
+                feeLine.setText(Format.money(quote.getCommission()));
+                totalLine.setText(Format.money(quote.getTotalCost()));
+                afterLine.setText(Format.money(quote.getPriceAfterwards()));
+                warningLine.setText(quote.isAffordable() ? ""
+                        : "Not enough money: the balance is " + Format.money(quote.getBuyerBalance()) + ".");
+            } catch (RuntimeException e) {
+                costLine.setText("-");
+                feeLine.setText("-");
+                totalLine.setText("-");
+                afterLine.setText("-");
+                warningLine.setText(String.valueOf(e.getMessage()));
+            }
+        };
+        quantity.textProperty().addListener((obs, old, value) -> updateQuote.run());
+        option.valueProperty().addListener((obs, old, value) -> updateQuote.run());
+        updateQuote.run();
 
         Optional<ButtonType> answer = dialog.showAndWait();
         if (answer.isEmpty() || answer.get() != ButtonType.OK) {
@@ -82,12 +131,37 @@ public final class TradeForms {
         TextField quantity = new TextField("10");
         TextField price = new TextField("0.50");
 
+        Label valueLine = new Label();
+        valueLine.getStyleClass().add("section-title");
+        Label noteLine = new Label();
+
         GridPane grid = grid();
         grid.addRow(0, new Label("Option:"), option);
         grid.addRow(1, new Label("Side:"), side);
         grid.addRow(2, new Label("Quantity:"), quantity);
         grid.addRow(3, new Label("Price per share:"), price);
+        grid.addRow(4, new Label("Order value:"), valueLine);
+        grid.add(noteLine, 0, 5, 2, 1);
         dialog.getDialogPane().setContent(grid);
+
+        Runnable updateValue = () -> {
+            Long amount = tryParseLong(quantity.getText());
+            Double limit = tryParseDouble(price.getText());
+            if (amount == null || amount < 1 || limit == null || limit <= 0) {
+                valueLine.setText("-");
+                noteLine.setText("");
+                return;
+            }
+            double value = amount * limit;
+            valueLine.setText(Format.money(value));
+            noteLine.setText(side.getValue() == OrderSide.BUY
+                    ? "This is the most you would pay; matching at a better price costs less."
+                    : "This is the least you would receive; matching at a better price pays more.");
+        };
+        quantity.textProperty().addListener((obs, old, value) -> updateValue.run());
+        price.textProperty().addListener((obs, old, value) -> updateValue.run());
+        side.valueProperty().addListener((obs, old, value) -> updateValue.run());
+        updateValue.run();
 
         Optional<ButtonType> answer = dialog.showAndWait();
         if (answer.isEmpty() || answer.get() != ButtonType.OK) {
@@ -190,6 +264,23 @@ public final class TradeForms {
         grid.setVgap(8);
         grid.setPadding(new Insets(10));
         return grid;
+    }
+
+    /** Quiet parsing for the live preview - a half typed number is not an error. */
+    private static Long tryParseLong(String text) {
+        try {
+            return Long.parseLong(text.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static Double tryParseDouble(String text) {
+        try {
+            return Double.parseDouble(text.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static Long parsePositiveLong(String text, String what) {

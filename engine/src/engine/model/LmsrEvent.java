@@ -51,6 +51,31 @@ public class LmsrEvent extends Event {
                 getOption(other).getSharesOutstanding(), b);
     }
 
+    /**
+     * Works out what a purchase would cost without changing anything, so the
+     * screen can show the price before the user commits to it.
+     * Returns {sharesCost, commission, totalPaid, priceAfterwards}.
+     */
+    public double[] quote(int optionIndex, long quantity) {
+        checkOptionIndex(optionIndex);
+        if (quantity < 1) {
+            throw new TradingException("Quantity must be at least 1.");
+        }
+        long qFirst = getOption(0).getSharesOutstanding();
+        long qSecond = getOption(1).getSharesOutstanding();
+        double before = LmsrMath.cost(qFirst, qSecond, b);
+        long afterFirst = optionIndex == 0 ? qFirst + quantity : qFirst;
+        long afterSecond = optionIndex == 1 ? qSecond + quantity : qSecond;
+
+        double sharesCost = LmsrMath.cost(afterFirst, afterSecond, b) - before;
+        double commission = getCommissionType() == CommissionType.ON_PURCHASE ? commissionOn(sharesCost) : 0.0;
+        double priceAfter = optionIndex == 0
+                ? LmsrMath.price(afterFirst, afterSecond, b)
+                : LmsrMath.price(afterSecond, afterFirst, b);
+
+        return new double[] { sharesCost, commission, sharesCost + commission, priceAfter };
+    }
+
     /** Buys shares against the event account; returns {sharesCost, commission, totalPaid}. */
     public double[] buy(User buyer, User marketMaker, int optionIndex, long quantity) {
         checkOptionIndex(optionIndex);

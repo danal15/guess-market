@@ -15,6 +15,7 @@ import engine.api.dto.OrderDTO;
 import engine.api.dto.OrderResultDTO;
 import engine.api.dto.ParticipantDTO;
 import engine.api.dto.PricePointDTO;
+import engine.api.dto.PurchaseQuoteDTO;
 import engine.api.dto.TradeDTO;
 import engine.api.dto.UserDTO;
 import engine.api.dto.UserEventInvolvementDTO;
@@ -200,6 +201,18 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     // ---------- trading ----------
+
+    @Override
+    public PurchaseQuoteDTO quoteLmsrPurchase(int eventId, String userName, int optionIndex, long quantity) {
+        requireLoaded();
+        LmsrEvent event = requireLmsr(market.requireEvent(eventId));
+        User buyer = market.requireUser(userName);
+
+        double[] quote = event.quote(optionIndex, quantity);
+        double balance = buyer.getAccount().getBalance();
+        return new PurchaseQuoteDTO(quote[0], quote[1], quote[2],
+                quote[0] / quantity, quote[3], balance, buyer.canAfford(quote[2]));
+    }
 
     @Override
     public BuyResultDTO buyLmsrShares(int eventId, String userName, int optionIndex, long quantity) {

@@ -28,6 +28,8 @@ public final class UserEventInvolvementDTO {
     private final String winningOptionName;
     private final Double profitOrLoss;
     private final Double tradingResult;
+    private final int openOrderCount;
+    private final long openOrderQuantity;
     private final double marketMakerPaid;
     private final double marketMakerReceived;
 
@@ -38,7 +40,8 @@ public final class UserEventInvolvementDTO {
                                    String option2Name, long option2Quantity, double option2Paid,
                                    String winningOptionName, Double profitOrLoss,
                                    Double tradingResult, double marketMakerPaid,
-                                   double marketMakerReceived) {
+                                   double marketMakerReceived,
+                                   int openOrderCount, long openOrderQuantity) {
         this.eventId = eventId;
         this.eventName = eventName;
         this.methodLabel = methodLabel;
@@ -58,6 +61,8 @@ public final class UserEventInvolvementDTO {
         this.tradingResult = tradingResult;
         this.marketMakerPaid = marketMakerPaid;
         this.marketMakerReceived = marketMakerReceived;
+        this.openOrderCount = openOrderCount;
+        this.openOrderQuantity = openOrderQuantity;
     }
 
     public int getEventId() {
@@ -134,6 +139,15 @@ public final class UserEventInvolvementDTO {
     /** Money put in because this user runs the event (the LMSR subsidy). */
     public double getMarketMakerPaid() {
         return marketMakerPaid;
+    }
+
+    /** Orders of this user still waiting in the book, not yet traded. */
+    public int getOpenOrderCount() {
+        return openOrderCount;
+    }
+
+    public long getOpenOrderQuantity() {
+        return openOrderQuantity;
     }
 
     /** Commission and leftover funds taken back as the event's market maker. */

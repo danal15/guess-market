@@ -170,6 +170,25 @@ public class GuessMarketEngine implements GMEngine {
             }
         }
 
+        int openOrders = 0;
+        long openQuantity = 0;
+        if (event instanceof OrderBookEvent book) {
+            for (int i = 0; i < 2; i++) {
+                for (Order order : book.book(i).getBids()) {
+                    if (order.getUserName().equals(userName)) {
+                        openOrders++;
+                        openQuantity += order.getRemainingQuantity();
+                    }
+                }
+                for (Order order : book.book(i).getAsks()) {
+                    if (order.getUserName().equals(userName)) {
+                        openOrders++;
+                        openQuantity += order.getRemainingQuantity();
+                    }
+                }
+            }
+        }
+
         return new UserEventInvolvementDTO(
                 event.getId(), event.getName(), event.getMethod().getLabel(),
                 event instanceof OrderBookEvent, event.getStatus().getLabel(),
@@ -184,7 +203,8 @@ public class GuessMarketEngine implements GMEngine {
                 holding == null ? 0.0 : holding.getAmountPaid(1),
                 winner, profitOrLoss, tradingResult,
                 holding == null ? 0.0 : holding.getMarketMakerPaid(),
-                holding == null ? 0.0 : holding.getMarketMakerReceived());
+                holding == null ? 0.0 : holding.getMarketMakerReceived(),
+                openOrders, openQuantity);
     }
 
     @Override
@@ -265,11 +285,24 @@ public class GuessMarketEngine implements GMEngine {
         boolean priceValid = price >= 0.01 - 1e-9 && price <= maxPrice + 1e-9
                 && Math.abs(price * 100 - Math.round(price * 100)) <= 1e-6;
 
+        // Whether this order would trade at once, or simply wait in the book.
+        Order opposing = buying
+                ? event.book(optionIndex).bestAsk()
+                : event.book(optionIndex).bestBid();
+        Double opposingPrice = opposing == null ? null : opposing.getPrice();
+        boolean wouldTrade = opposing != null
+                && (buying ? opposing.getPrice() <= price + 1e-9 : opposing.getPrice() >= price - 1e-9);
+        if (!wouldTrade && buying && event.isAllowMint()) {
+            Order otherSideBid = event.book(1 - optionIndex).bestBid();
+            wouldTrade = otherSideBid != null
+                    && otherSideBid.getPrice() + price >= event.getD() - 1e-9;
+        }
+
         return new OrderQuoteDTO(buying, orderValue, commission, total,
                 trader.getAccount().getBalance(), held,
                 !buying || trader.canAfford(total),
                 buying || held >= quantity,
-                maxPrice, priceValid);
+                maxPrice, priceValid, opposingPrice, wouldTrade);
     }
 
     @Override

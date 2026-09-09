@@ -17,10 +17,13 @@ public final class OrderQuoteDTO {
     private final boolean enoughShares;
     private final double maxPrice;
     private final boolean priceValid;
+    private final Double bestOpposingPrice;
+    private final boolean wouldTradeNow;
 
     public OrderQuoteDTO(boolean buying, double orderValue, double commission, double totalCost,
                          double balance, long sharesHeld, boolean affordable, boolean enoughShares,
-                         double maxPrice, boolean priceValid) {
+                         double maxPrice, boolean priceValid,
+                         Double bestOpposingPrice, boolean wouldTradeNow) {
         this.buying = buying;
         this.orderValue = orderValue;
         this.commission = commission;
@@ -31,6 +34,8 @@ public final class OrderQuoteDTO {
         this.enoughShares = enoughShares;
         this.maxPrice = maxPrice;
         this.priceValid = priceValid;
+        this.bestOpposingPrice = bestOpposingPrice;
+        this.wouldTradeNow = wouldTradeNow;
     }
 
     public boolean isBuying() {
@@ -72,5 +77,15 @@ public final class OrderQuoteDTO {
 
     public boolean isPriceValid() {
         return priceValid;
+    }
+
+    /** The best price on the other side right now, or null if nobody is there. */
+    public Double getBestOpposingPrice() {
+        return bestOpposingPrice;
+    }
+
+    /** Whether this order would trade straight away instead of waiting in the book. */
+    public boolean isWouldTradeNow() {
+        return wouldTradeNow;
     }
 }

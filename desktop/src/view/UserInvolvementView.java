@@ -42,6 +42,16 @@ public final class UserInvolvementView {
 
         box.getChildren().add(new Label("Commission you paid: " + Format.money(involvement.getCommissionPaid())));
 
+        if (involvement.getOpenOrderCount() > 0) {
+            Label waiting = new Label(involvement.getOpenOrderCount()
+                    + (involvement.getOpenOrderCount() == 1 ? " order" : " orders")
+                    + " of yours (" + involvement.getOpenOrderQuantity()
+                    + " shares) are still waiting in the book and have not traded yet.");
+            waiting.setWrapText(true);
+            waiting.getStyleClass().add("blocked-label");
+            box.getChildren().add(waiting);
+        }
+
         if (involvement.getWinningOptionName() != null) {
             box.getChildren().add(new Label("Winning option: " + involvement.getWinningOptionName()));
             box.getChildren().add(resultBlock(involvement));

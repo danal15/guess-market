@@ -191,11 +191,28 @@ public final class TradeForms {
                 if (quote.isBuying()) {
                     haveCaption.setText("Your balance:");
                     haveLine.setText(Format.money(quote.getBalance()));
-                    noteLine.setText("This is the most you could pay - a match at a better price costs less.");
                 } else {
                     haveCaption.setText("Shares you hold:");
                     haveLine.setText(String.valueOf(quote.getSharesHeld()));
-                    noteLine.setText("This is the least you could receive - a match at a better price pays more.");
+                }
+
+                // An order book needs somebody on the other side. Say so up
+                // front, so a resting order is never mistaken for a bet.
+                String otherSide = quote.isBuying() ? "selling" : "buying";
+                if (quote.isWouldTradeNow()) {
+                    noteLine.setText("This will trade straight away against "
+                            + Format.price(quote.getBestOpposingPrice()) + ". "
+                            + (quote.isBuying()
+                                    ? "The amounts above are the most you could pay."
+                                    : "The amounts above are the least you could receive."));
+                } else if (quote.getBestOpposingPrice() == null) {
+                    noteLine.setText("Nobody is " + otherSide + " this option right now, so your order will"
+                            + " wait in the book until somebody does. No money moves until it trades.");
+                } else {
+                    noteLine.setText("The best price on the other side is "
+                            + Format.price(quote.getBestOpposingPrice())
+                            + ", so your order will wait in the book until it is matched."
+                            + " No money moves until it trades.");
                 }
 
                 StringBuilder problem = new StringBuilder();

@@ -12,6 +12,7 @@ import engine.api.dto.OrderBookEventStateDTO;
 import engine.api.dto.OrderBookSideDTO;
 import engine.api.dto.OrderBookStatsDTO;
 import engine.api.dto.OrderDTO;
+import engine.api.dto.OrderQuoteDTO;
 import engine.api.dto.OrderResultDTO;
 import engine.api.dto.ParticipantDTO;
 import engine.api.dto.PricePointDTO;
@@ -224,6 +225,39 @@ public class GuessMarketEngine implements GMEngine {
         double[] result = event.buy(buyer, marketMaker, optionIndex, quantity);
         return new BuyResultDTO(result[0], result[1], result[2],
                 buyer.getAccount().getBalance(), buyer.isBlocked(), toLmsrState(event));
+    }
+
+    @Override
+    public OrderQuoteDTO quoteOrder(int eventId, String userName, int optionIndex,
+                                    OrderSide side, double price, long quantity) {
+        requireLoaded();
+        OrderBookEvent event = requireOrderBook(market.requireEvent(eventId));
+        User trader = market.requireUser(userName);
+        if (optionIndex != 0 && optionIndex != 1) {
+            throw new IllegalArgumentException("Option index must be 0 or 1.");
+        }
+
+        boolean buying = side == OrderSide.BUY;
+        double orderValue = quantity * price;
+        // Commission is charged to buyers only, and only when the event
+        // collects it on purchase. It is a maximum: a fill at a better price
+        // costs less.
+        double commission = buying && event.getCommissionType() == CommissionType.ON_PURCHASE
+                ? orderValue * event.getCommissionPercent() / 100.0
+                : 0.0;
+        double total = buying ? orderValue + commission : orderValue;
+
+        Holding holding = trader.existingHolding(eventId);
+        long held = holding == null ? 0L : holding.getQuantity(optionIndex);
+        double maxPrice = event.maxPrice();
+        boolean priceValid = price >= 0.01 - 1e-9 && price <= maxPrice + 1e-9
+                && Math.abs(price * 100 - Math.round(price * 100)) <= 1e-6;
+
+        return new OrderQuoteDTO(buying, orderValue, commission, total,
+                trader.getAccount().getBalance(), held,
+                !buying || trader.canAfford(total),
+                buying || held >= quantity,
+                maxPrice, priceValid);
     }
 
     @Override

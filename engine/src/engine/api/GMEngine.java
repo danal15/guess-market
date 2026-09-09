@@ -6,6 +6,7 @@ import engine.api.dto.EventFilterDTO;
 import engine.api.dto.LmsrEventStateDTO;
 import engine.api.dto.NewEventRequestDTO;
 import engine.api.dto.OrderBookEventStateDTO;
+import engine.api.dto.OrderQuoteDTO;
 import engine.api.dto.OrderResultDTO;
 import engine.api.dto.PurchaseQuoteDTO;
 import engine.api.dto.UserDTO;
@@ -53,6 +54,10 @@ public interface GMEngine {
     PurchaseQuoteDTO quoteLmsrPurchase(int eventId, String userName, int optionIndex, long quantity);
 
     BuyResultDTO buyLmsrShares(int eventId, String userName, int optionIndex, long quantity);
+
+    /** Works out what an order would cost or bring in, without submitting it. */
+    OrderQuoteDTO quoteOrder(int eventId, String userName, int optionIndex,
+                             OrderSide side, double price, long quantity);
 
     OrderResultDTO placeOrder(int eventId, String userName, int optionIndex,
                               OrderSide side, double price, long quantity);

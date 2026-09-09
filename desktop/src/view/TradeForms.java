@@ -4,6 +4,7 @@ import engine.api.GMEngine;
 import engine.api.dto.BuyResultDTO;
 import engine.api.dto.EventDTO;
 import engine.api.dto.FillDTO;
+import engine.api.dto.OrderQuoteDTO;
 import engine.api.dto.OrderResultDTO;
 import engine.api.dto.PurchaseQuoteDTO;
 import engine.model.OrderSide;
@@ -132,8 +133,17 @@ public final class TradeForms {
         TextField price = new TextField("0.50");
 
         Label valueLine = new Label();
-        valueLine.getStyleClass().add("section-title");
+        Label feeLine = new Label();
+        Label totalLine = new Label();
+        totalLine.getStyleClass().add("section-title");
+        Label haveLine = new Label();
         Label noteLine = new Label();
+        Label warningLine = new Label();
+        warningLine.getStyleClass().add("blocked-label");
+        warningLine.setWrapText(true);
+
+        Label totalCaption = new Label("Total to pay:");
+        Label haveCaption = new Label("Your balance:");
 
         GridPane grid = grid();
         grid.addRow(0, new Label("Option:"), option);
@@ -141,27 +151,76 @@ public final class TradeForms {
         grid.addRow(2, new Label("Quantity:"), quantity);
         grid.addRow(3, new Label("Price per share:"), price);
         grid.addRow(4, new Label("Order value:"), valueLine);
-        grid.add(noteLine, 0, 5, 2, 1);
+        grid.addRow(5, new Label("Commission:"), feeLine);
+        grid.addRow(6, totalCaption, totalLine);
+        grid.addRow(7, haveCaption, haveLine);
+        grid.add(noteLine, 0, 8, 2, 1);
+        grid.add(warningLine, 0, 9, 2, 1);
         dialog.getDialogPane().setContent(grid);
 
-        Runnable updateValue = () -> {
+        // Recalculated on every keystroke: buying is checked against the
+        // balance, selling against the shares actually held.
+        Runnable updateQuote = () -> {
             Long amount = tryParseLong(quantity.getText());
             Double limit = tryParseDouble(price.getText());
-            if (amount == null || amount < 1 || limit == null || limit <= 0) {
+            if (amount == null || amount < 1 || limit == null) {
                 valueLine.setText("-");
+                feeLine.setText("-");
+                totalLine.setText("-");
+                haveLine.setText("-");
                 noteLine.setText("");
+                warningLine.setText("");
                 return;
             }
-            double value = amount * limit;
-            valueLine.setText(Format.money(value));
-            noteLine.setText(side.getValue() == OrderSide.BUY
-                    ? "This is the most you would pay; matching at a better price costs less."
-                    : "This is the least you would receive; matching at a better price pays more.");
+            try {
+                OrderQuoteDTO quote = engine.quoteOrder(event.getId(), userName,
+                        option.getSelectionModel().getSelectedIndex(), side.getValue(), limit, amount);
+
+                valueLine.setText(Format.money(quote.getOrderValue()));
+                feeLine.setText(quote.isBuying() ? Format.money(quote.getCommission()) : "none when selling");
+                totalCaption.setText(quote.isBuying() ? "Total to pay:" : "You would receive:");
+                totalLine.setText(Format.money(quote.getTotalCost()));
+
+                if (quote.isBuying()) {
+                    haveCaption.setText("Your balance:");
+                    haveLine.setText(Format.money(quote.getBalance()));
+                    noteLine.setText("At most - matching at a better price costs less.");
+                } else {
+                    haveCaption.setText("Shares you hold:");
+                    haveLine.setText(String.valueOf(quote.getSharesHeld()));
+                    noteLine.setText("At least - matching at a better price pays more.");
+                }
+
+                StringBuilder problem = new StringBuilder();
+                if (!quote.isPriceValid()) {
+                    problem.append("Price must be in whole cents between 0.01 and ")
+                            .append(Format.money(quote.getMaxPrice())).append(". ");
+                }
+                if (quote.isBuying() && !quote.isAffordable()) {
+                    problem.append("Not enough money: this needs ")
+                            .append(Format.money(quote.getTotalCost()))
+                            .append(" but the balance is ")
+                            .append(Format.money(quote.getBalance())).append(". ");
+                }
+                if (!quote.isBuying() && !quote.isEnoughShares()) {
+                    problem.append("Not enough shares: only ")
+                            .append(quote.getSharesHeld()).append(" held.");
+                }
+                warningLine.setText(problem.toString().trim());
+            } catch (RuntimeException e) {
+                valueLine.setText("-");
+                feeLine.setText("-");
+                totalLine.setText("-");
+                haveLine.setText("-");
+                noteLine.setText("");
+                warningLine.setText(String.valueOf(e.getMessage()));
+            }
         };
-        quantity.textProperty().addListener((obs, old, value) -> updateValue.run());
-        price.textProperty().addListener((obs, old, value) -> updateValue.run());
-        side.valueProperty().addListener((obs, old, value) -> updateValue.run());
-        updateValue.run();
+        quantity.textProperty().addListener((obs, old, value) -> updateQuote.run());
+        price.textProperty().addListener((obs, old, value) -> updateQuote.run());
+        side.valueProperty().addListener((obs, old, value) -> updateQuote.run());
+        option.valueProperty().addListener((obs, old, value) -> updateQuote.run());
+        updateQuote.run();
 
         Optional<ButtonType> answer = dialog.showAndWait();
         if (answer.isEmpty() || answer.get() != ButtonType.OK) {

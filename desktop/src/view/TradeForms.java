@@ -79,8 +79,17 @@ public final class TradeForms {
                 feeLine.setText(Format.money(quote.getCommission()));
                 totalLine.setText(Format.money(quote.getTotalCost()));
                 afterLine.setText(Format.money(quote.getPriceAfterwards()));
-                warningLine.setText(quote.isAffordable() ? ""
-                        : "Not enough money: the balance is " + Format.money(quote.getBuyerBalance()) + ".");
+                if (!quote.isWorthCharging()) {
+                    // Below a cent the price stops being a real one, so the
+                    // total is shown exactly rather than rounded to $0.00.
+                    totalLine.setText(String.format("less than $0.01 (%.8f)", quote.getTotalCost()));
+                    warningLine.setText("This option has been pushed so low that the purchase"
+                            + " would cost less than $0.01. Buy more of it to reach a real price.");
+                } else {
+                    warningLine.setText(quote.isAffordable() ? ""
+                            : "Not enough money: the balance is "
+                                    + Format.money(quote.getBuyerBalance()) + ".");
+                }
             } catch (RuntimeException e) {
                 costLine.setText("-");
                 feeLine.setText("-");

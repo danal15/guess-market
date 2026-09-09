@@ -64,6 +64,7 @@ public class LmsrEvent extends Event {
         if (quantity < 1) {
             throw new TradingException("Quantity must be at least 1.");
         }
+        requireRoomFor(optionIndex, quantity);
         long qFirst = getOption(0).getSharesOutstanding();
         long qSecond = getOption(1).getSharesOutstanding();
         double before = LmsrMath.cost(qFirst, qSecond, b);
@@ -80,6 +81,34 @@ public class LmsrEvent extends Event {
     }
 
     /** Buys shares against the event account; returns {sharesCost, commission, totalPaid}. */
+    /** The smallest amount of money the system can actually charge. */
+    public static final double SMALLEST_CHARGE = 0.01;
+
+    /**
+     * A price is only ever shown to the cent, so a purchase costing less than
+     * that would be handed over for nothing while still paying out in full if
+     * it won. When one option has been bought heavily the other falls close
+     * enough to zero for that to happen, so it is refused here.
+     */
+    private void requireWorthCharging(int optionIndex, double totalPaid) {
+        if (totalPaid < SMALLEST_CHARGE) {
+            throw new TradingException(String.format(
+                    "'%s' has been pushed so low that this would cost less than $0.01,"
+                            + " which is not a real price. Buy more of it so the purchase"
+                            + " comes to at least $0.01.",
+                    getOption(optionIndex).getName()));
+        }
+    }
+
+    /** Share counts are whole numbers, so a quantity that overflows them is refused. */
+    private void requireRoomFor(int optionIndex, long quantity) {
+        long held = getOption(optionIndex).getSharesOutstanding();
+        if (quantity > Long.MAX_VALUE - held) {
+            throw new TradingException(
+                    "That quantity is too large for this event to hold.");
+        }
+    }
+
     public double[] buy(User buyer, User marketMaker, int optionIndex, long quantity) {
         checkOptionIndex(optionIndex);
         requireActiveForTrading();
@@ -87,6 +116,8 @@ public class LmsrEvent extends Event {
         if (quantity < 1) {
             throw new TradingException("Quantity must be at least 1.");
         }
+
+        requireRoomFor(optionIndex, quantity);
 
         long qFirst = getOption(0).getSharesOutstanding();
         long qSecond = getOption(1).getSharesOutstanding();
@@ -97,6 +128,8 @@ public class LmsrEvent extends Event {
 
         double commission = getCommissionType() == CommissionType.ON_PURCHASE ? commissionOn(sharesCost) : 0.0;
         double totalPaid = sharesCost + commission;
+
+        requireWorthCharging(optionIndex, totalPaid);
 
         if (!buyer.canAfford(totalPaid)) {
             throw new TradingException(String.format(

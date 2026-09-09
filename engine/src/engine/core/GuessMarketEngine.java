@@ -244,7 +244,8 @@ public class GuessMarketEngine implements GMEngine {
         double[] quote = event.quote(optionIndex, quantity);
         double balance = buyer.getAccount().getBalance();
         return new PurchaseQuoteDTO(quote[0], quote[1], quote[2],
-                quote[0] / quantity, quote[3], balance, buyer.canAfford(quote[2]));
+                quote[0] / quantity, quote[3], balance, buyer.canAfford(quote[2]),
+                quote[2] >= LmsrEvent.SMALLEST_CHARGE);
     }
 
     @Override

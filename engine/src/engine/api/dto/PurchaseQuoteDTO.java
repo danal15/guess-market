@@ -10,10 +10,11 @@ public final class PurchaseQuoteDTO {
     private final double priceAfterwards;
     private final double buyerBalance;
     private final boolean affordable;
+    private final boolean worthCharging;
 
     public PurchaseQuoteDTO(double sharesCost, double commission, double totalCost,
                             double averagePricePerShare, double priceAfterwards,
-                            double buyerBalance, boolean affordable) {
+                            double buyerBalance, boolean affordable, boolean worthCharging) {
         this.sharesCost = sharesCost;
         this.commission = commission;
         this.totalCost = totalCost;
@@ -21,6 +22,7 @@ public final class PurchaseQuoteDTO {
         this.priceAfterwards = priceAfterwards;
         this.buyerBalance = buyerBalance;
         this.affordable = affordable;
+        this.worthCharging = worthCharging;
     }
 
     public double getSharesCost() {
@@ -49,5 +51,10 @@ public final class PurchaseQuoteDTO {
 
     public boolean isAffordable() {
         return affordable;
+    }
+
+    /** Whether the purchase comes to at least one cent, the smallest real charge. */
+    public boolean isWorthCharging() {
+        return worthCharging;
     }
 }

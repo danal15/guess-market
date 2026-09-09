@@ -1,0 +1,22 @@
+.root {
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 12px;
+    -fx-background-color: #f4f5f7;
+}
+
+.app-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.section-title {
+    -fx-font-weight: bold;
+}
+
+.pane-box {
+    -fx-background-color: white;
+}
+
+.balance-label {
+    -fx-font-weight: bold;
+}

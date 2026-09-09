@@ -68,9 +68,11 @@ public final class Dialogs {
         Label badge = new Label(glyph);
         badge.getStyleClass().addAll("dialog-badge", modifier);
         badge.setAlignment(Pos.CENTER);
-        badge.setMinSize(36, 36);
-        badge.setPrefSize(36, 36);
-        badge.setMaxSize(36, 36);
+        // It sits in the title strip now, so it is sized to that row rather
+        // than to the headline it used to stand beside.
+        badge.setMinSize(20, 20);
+        badge.setPrefSize(20, 20);
+        badge.setMaxSize(20, 20);
         return badge;
     }
 

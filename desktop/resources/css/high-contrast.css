@@ -122,7 +122,7 @@
     -fx-background-color: -raised; -fx-background-radius: 14 14 0 0;
     -fx-border-color: transparent transparent -accent transparent; -fx-border-width: 0 0 2 0;
 }
-.dialog-pane .dialog-title-bar { -fx-padding: 8 8 2 18; }
+.dialog-pane .dialog-title-bar { -fx-padding: 8 8 2 14; -fx-spacing: 8; }
 .dialog-pane .dialog-header .dialog-app-name { -fx-text-fill: -ink-muted; -fx-font-size: 13px; }
 .dialog-pane .dialog-close {
     -fx-background-color: -page; -fx-border-color: -accent; -fx-border-width: 2;
@@ -137,7 +137,7 @@
 .dialog-pane .content, .dialog-pane .content.label, .dialog-pane .label { -fx-text-fill: -ink; }
 .dialog-pane .content { -fx-padding: 18 22 6 22; }
 .dialog-pane .dialog-header .dialog-badge {
-    -fx-background-radius: 18; -fx-font-size: 19px; -fx-font-weight: bold;
+    -fx-background-radius: 10; -fx-font-size: 12px; -fx-font-weight: bold;
     -fx-text-fill: -accent-ink;
 }
 .dialog-pane .dialog-badge-info { -fx-background-color: -accent; }

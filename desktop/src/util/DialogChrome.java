@@ -62,24 +62,22 @@ public final class DialogChrome {
         close.setFocusTraversable(false);
         close.setOnAction(event -> dismiss(dialog));
 
-        HBox titleBar = new HBox(appName, grow(), close);
+        HBox titleBar = new HBox();
         titleBar.getStyleClass().add("dialog-title-bar");
         titleBar.setAlignment(Pos.CENTER_LEFT);
+        if (badge != null) {
+            titleBar.getChildren().add(badge);
+        }
+        titleBar.getChildren().addAll(appName, grow(), close);
         makeDraggable(titleBar);
 
         Label text = new Label(headline == null ? "" : headline);
         text.getStyleClass().add("dialog-headline");
         text.setWrapText(true);
 
-        // The badge keeps the right of the headline; the close cross lives in
-        // the strip above it, so the only thing that can be pressed up there
-        // actually does something.
         HBox headlineRow = new HBox(text, grow());
         headlineRow.getStyleClass().add("dialog-headline-row");
         headlineRow.setAlignment(Pos.CENTER_LEFT);
-        if (badge != null) {
-            headlineRow.getChildren().add(badge);
-        }
 
         VBox header = new VBox(titleBar, headlineRow);
         header.getStyleClass().add("dialog-header");

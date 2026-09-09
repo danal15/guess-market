@@ -126,12 +126,13 @@ public final class UserEventInvolvementDTO {
         return winningOptionName;
     }
 
-    /** The whole effect on the balance. Null while the event is still open. */
+    /** The whole effect on the balance. Null while the event is still open, and
+     *  null for a user who never held a position in it. */
     public Double getProfitOrLoss() {
         return profitOrLoss;
     }
 
-    /** Just the buying and selling part. Null while the event is still open. */
+    /** Just the buying and selling part. Null on the same terms as the result. */
     public Double getTradingResult() {
         return tradingResult;
     }

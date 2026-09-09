@@ -54,7 +54,16 @@ public final class UserInvolvementView {
 
         if (involvement.getWinningOptionName() != null) {
             box.getChildren().add(new Label("Winning option: " + involvement.getWinningOptionName()));
-            box.getChildren().add(resultBlock(involvement));
+            if (involvement.getProfitOrLoss() == null) {
+                // Never traded here, so there is no position to report a result on.
+                Label none = new Label("You did not take part in this event, so closing it"
+                        + " did not change your balance.");
+                none.setWrapText(true);
+                none.getStyleClass().add("hint-label");
+                box.getChildren().add(none);
+            } else {
+                box.getChildren().add(resultBlock(involvement));
+            }
         }
         return box;
     }
@@ -94,7 +103,13 @@ public final class UserInvolvementView {
         total.getStyleClass().add("section-title");
         box.getChildren().add(total);
 
-        Label note = new Label("This is the total change to your balance from this event.");
+        boolean heldNothing = involvement.getOption1Quantity() == 0
+                && involvement.getOption2Quantity() == 0;
+        Label note = new Label(heldNothing && !ranTheEvent
+                ? "You held no shares when the event closed, so nothing was paid out to you."
+                        + " Any order of yours that had not traded was cancelled."
+                : "This is the total change to your balance from this event.");
+        note.setWrapText(true);
         note.getStyleClass().add("hint-label");
         box.getChildren().add(note);
         return box;

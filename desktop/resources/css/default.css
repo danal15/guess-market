@@ -46,10 +46,11 @@
 /* dropdowns */
 .choice-box { -fx-background-color: -surface; -fx-border-color: -line; -fx-background-radius: 4; -fx-border-radius: 4; }
 .choice-box .label { -fx-text-fill: -ink; }
-.choice-box .context-menu { -fx-background-color: -raised; -fx-border-color: -line; }
-.choice-box .menu-item .label { -fx-text-fill: -ink; }
-.choice-box .menu-item:focused { -fx-background-color: -accent; }
-.choice-box .menu-item:focused .label { -fx-text-fill: -accent-ink; }
+.choice-box .open-button .arrow { -fx-background-color: -ink-muted; }
+.context-menu { -fx-background-color: -raised; -fx-border-color: -line; }
+.menu-item .label { -fx-text-fill: -ink; }
+.menu-item:focused { -fx-background-color: -accent; }
+.menu-item:focused .label { -fx-text-fill: -accent-ink; }
 
 /* checkbox */
 .check-box .box { -fx-background-color: -surface; -fx-border-color: -line; -fx-border-radius: 3; }
@@ -64,6 +65,7 @@
 .table-view .column-header .label { -fx-text-fill: -ink; -fx-font-weight: bold; }
 .table-row-cell { -fx-background-color: -surface; -fx-border-color: transparent; }
 .table-row-cell:odd { -fx-background-color: derive(-page, 2%); }
+.table-row-cell .text { -fx-fill: -ink; }
 .table-row-cell:selected { -fx-background-color: -accent; }
 .table-row-cell:selected .text { -fx-fill: -accent-ink; }
 .table-view .placeholder .label { -fx-text-fill: -ink-muted; }
@@ -79,8 +81,10 @@
 .tab-pane .tab { -fx-background-color: derive(-page, -4%); }
 .tab-pane .tab:selected { -fx-background-color: -surface; }
 .tab .tab-label { -fx-text-fill: -ink; }
+.tab:selected .tab-label { -fx-text-fill: -ink; }
 .titled-pane > .title { -fx-background-color: derive(-page, -3%); -fx-border-color: -line; }
 .titled-pane > .title > .text { -fx-fill: -ink; }
+.titled-pane > .title > .arrow-button .arrow { -fx-background-color: -ink; }
 .titled-pane > .content { -fx-background-color: -surface; -fx-border-color: -line; }
 .progress-bar > .track { -fx-background-color: derive(-page, -5%); }
 .progress-bar > .bar { -fx-background-color: -accent; }
@@ -91,6 +95,7 @@
 .chart { -fx-background-color: -surface; }
 .chart-plot-background { -fx-background-color: -surface; }
 .chart-vertical-grid-lines, .chart-horizontal-grid-lines { -fx-stroke: derive(-line, 30%); }
+.chart-alternative-row-fill { -fx-fill: transparent; -fx-stroke: transparent; }
 .axis { -fx-tick-label-fill: -ink-muted; }
 .axis-label { -fx-text-fill: -ink; }
 .chart-legend { -fx-background-color: transparent; }
@@ -104,3 +109,4 @@
 .dialog-pane .header-panel .label { -fx-text-fill: -ink; -fx-font-size: 13px; -fx-font-weight: bold; }
 .dialog-pane .content, .dialog-pane .content.label { -fx-text-fill: -ink; }
 .dialog-pane .button-bar .button { -fx-background-color: -surface; }
+.dialog-pane .button-bar .button:hover { -fx-background-color: derive(-page, -3%); }

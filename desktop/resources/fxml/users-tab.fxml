@@ -50,7 +50,7 @@
                 <items>
 
                     <VBox spacing="6" minHeight="150">
-                        <Label text="Events taking part in / owned" styleClass="section-title"/>
+                        <Label text="All events - pick one to take part in it" styleClass="section-title"/>
                         <TableView fx:id="userEventsTable" minHeight="90">
                             <VBox.vgrow>
                                 <Priority fx:constant="ALWAYS"/>

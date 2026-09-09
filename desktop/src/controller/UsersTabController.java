@@ -74,13 +74,19 @@ public class UsersTabController {
                 Tables.text("Event", EventDTO::getName),
                 Tables.text("Status", EventDTO::getStatusLabel),
                 Tables.text("Method", EventDTO::getMethodLabel),
-                Tables.text("Role", event -> {
+                Tables.text("Your role", event -> {
                     UserDTO user = usersTable.getSelectionModel().getSelectedItem();
-                    boolean isMm = user != null && event.getMarketMakerName().equals(user.getName());
-                    return isMm ? "market maker" : "participant";
+                    if (user == null) {
+                        return "";
+                    }
+                    if (event.getMarketMakerName().equals(user.getName())) {
+                        return "market maker";
+                    }
+                    return engine.isParticipant(user.getName(), event.getId())
+                            ? "taking part" : "not involved yet";
                 })));
         userEventsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        userEventsTable.setPlaceholder(new Label("This user is not taking part in any event yet."));
+        userEventsTable.setPlaceholder(new Label("Load a market file to see the events."));
         userEventsTable.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, selected) -> onEventSelected(selected));
     }

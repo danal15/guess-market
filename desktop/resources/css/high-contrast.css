@@ -102,3 +102,4 @@
 .dialog-pane .header-panel .label { -fx-text-fill: -accent; -fx-font-size: 17px; -fx-font-weight: bold; }
 .dialog-pane .content, .dialog-pane .content.label, .dialog-pane .label { -fx-text-fill: -ink; }
 .dialog-pane .button-bar .button { -fx-background-color: -page; -fx-text-fill: -accent; }
+.dialog-pane .button-bar .button:hover { -fx-background-color: #333300; }

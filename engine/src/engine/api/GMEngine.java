@@ -41,7 +41,11 @@ public interface GMEngine {
 
     UserDTO getUser(String userName);
 
+    /** Every event, so a user can reach one they have not taken part in yet. */
     List<EventDTO> getUserEvents(String userName);
+
+    /** Whether this user has already acted in this event. */
+    boolean isParticipant(String userName, int eventId);
 
     UserEventInvolvementDTO getUserInvolvement(String userName, int eventId);
 

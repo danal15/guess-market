@@ -135,14 +135,16 @@ public class GuessMarketEngine implements GMEngine {
     @Override
     public List<EventDTO> getUserEvents(String userName) {
         requireLoaded();
-        User user = market.requireUser(userName);
-        List<EventDTO> result = new ArrayList<>();
-        for (Event event : market.getEvents()) {
-            if (user.participatesIn(event.getId()) || event.isMarketMaker(user.getName())) {
-                result.add(toEventDTO(event));
-            }
-        }
-        return result;
+        // Every event, not only the ones already joined: a user has to be able
+        // to reach an event in order to take part in it for the first time.
+        market.requireUser(userName);
+        return getEvents(EventFilterDTO.all());
+    }
+
+    @Override
+    public boolean isParticipant(String userName, int eventId) {
+        requireLoaded();
+        return market.requireUser(userName).participatesIn(eventId);
     }
 
     @Override

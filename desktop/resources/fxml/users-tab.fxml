@@ -20,7 +20,7 @@
                 <Insets top="8" right="8" bottom="8" left="8"/>
             </padding>
             <Label text="Users" styleClass="section-title"/>
-            <TableView fx:id="usersTable">
+            <TableView fx:id="usersTable" minHeight="120">
                 <VBox.vgrow>
                     <Priority fx:constant="ALWAYS"/>
                 </VBox.vgrow>
@@ -41,17 +41,35 @@
                 <Label fx:id="balanceLabel" text="Balance: -" styleClass="balance-label"/>
             </HBox>
 
-            <Label text="Events taking part in / owned" styleClass="section-title"/>
-            <TableView fx:id="userEventsTable" prefHeight="150"/>
-
-            <HBox fx:id="actionBar" spacing="8" alignment="CENTER_LEFT"/>
-
-            <Label text="Event details and trade" styleClass="section-title"/>
-            <ScrollPane fx:id="userDetailsHolder" fitToWidth="true">
+            <!-- A vertical split keeps the event list usable no matter how tall the
+                 details below it become, and lets the divider be dragged. -->
+            <SplitPane orientation="VERTICAL" dividerPositions="0.42">
                 <VBox.vgrow>
                     <Priority fx:constant="ALWAYS"/>
                 </VBox.vgrow>
-            </ScrollPane>
+                <items>
+
+                    <VBox spacing="6" minHeight="150">
+                        <Label text="Events taking part in / owned" styleClass="section-title"/>
+                        <TableView fx:id="userEventsTable" minHeight="90">
+                            <VBox.vgrow>
+                                <Priority fx:constant="ALWAYS"/>
+                            </VBox.vgrow>
+                        </TableView>
+                        <HBox fx:id="actionBar" spacing="8" alignment="CENTER_LEFT" minHeight="32"/>
+                    </VBox>
+
+                    <VBox spacing="6" minHeight="150">
+                        <Label text="Event details and trade" styleClass="section-title"/>
+                        <ScrollPane fx:id="userDetailsHolder" fitToWidth="true" prefHeight="200">
+                            <VBox.vgrow>
+                                <Priority fx:constant="ALWAYS"/>
+                            </VBox.vgrow>
+                        </ScrollPane>
+                    </VBox>
+
+                </items>
+            </SplitPane>
         </VBox>
 
     </items>

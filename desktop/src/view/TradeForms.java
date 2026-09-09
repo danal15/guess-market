@@ -45,8 +45,7 @@ public final class TradeForms {
         Label totalLine = new Label();
         totalLine.getStyleClass().add("section-title");
         Label afterLine = new Label();
-        Label warningLine = new Label();
-        warningLine.getStyleClass().add("blocked-label");
+        Label warningLine = warningLabel();
 
         GridPane grid = grid();
         grid.addRow(0, new Label("Option:"), option);
@@ -149,8 +148,7 @@ public final class TradeForms {
         totalLine.getStyleClass().add("section-title");
         Label haveLine = new Label();
         Label noteLine = new Label();
-        Label warningLine = new Label();
-        warningLine.getStyleClass().add("blocked-label");
+        Label warningLine = warningLabel();
         warningLine.setWrapText(true);
 
         Label totalCaption = new Label("Total to pay:");
@@ -350,11 +348,36 @@ public final class TradeForms {
         return dialog;
     }
 
+    /**
+     * A warning is drawn as a coloured chip, so an empty one would still paint
+     * its background and read as a stray mark. It only takes up room while it
+     * has something to say.
+     */
+    private static Label warningLabel() {
+        Label label = new Label();
+        label.getStyleClass().add("blocked-label");
+        // A warning that is cut off in the middle is worse than none at all.
+        // Wrapping alone is not enough inside a grid: the row has to be told
+        // it may grow to whatever the wrapped text needs.
+        label.setWrapText(true);
+        label.setPrefWidth(300);
+        label.setMaxWidth(300);
+        label.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        label.visibleProperty().bind(label.textProperty().isNotEmpty());
+        label.managedProperty().bind(label.visibleProperty());
+        return label;
+    }
+
     private static GridPane grid() {
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(8);
         grid.setPadding(new Insets(10));
+        // A long value in the second column must not squeeze the captions in
+        // the first one down to "Price afterwa...".
+        javafx.scene.layout.ColumnConstraints captions = new javafx.scene.layout.ColumnConstraints();
+        captions.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        grid.getColumnConstraints().add(captions);
         return grid;
     }
 

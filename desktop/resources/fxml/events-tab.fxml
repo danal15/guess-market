@@ -5,6 +5,7 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
@@ -17,21 +18,25 @@
             <padding>
                 <Insets top="8" right="8" bottom="8" left="8"/>
             </padding>
-            <Label text="Filters" styleClass="section-title"/>
-            <HBox spacing="6">
-                <Label text="Type:" minWidth="80"/>
-                <HBox fx:id="methodFilterBox" spacing="4"/>
-            </HBox>
-            <HBox spacing="6">
-                <Label text="Status:" minWidth="80"/>
-                <HBox fx:id="statusFilterBox" spacing="4"/>
-            </HBox>
-            <HBox spacing="6">
-                <Label text="Commission:" minWidth="80"/>
-                <HBox fx:id="commissionFilterBox" spacing="4"/>
-            </HBox>
-            <Label text="Events" styleClass="section-title"/>
-            <TableView fx:id="eventsTable">
+
+            <!-- Filters are a secondary control, so they wrap into as little
+                 vertical space as the window allows. -->
+            <FlowPane hgap="14" vgap="4">
+                <HBox spacing="4" alignment="CENTER_LEFT">
+                    <Label text="Method" styleClass="hint-label"/>
+                    <HBox fx:id="methodFilterBox" spacing="3"/>
+                </HBox>
+                <HBox spacing="4" alignment="CENTER_LEFT">
+                    <Label text="Status" styleClass="hint-label"/>
+                    <HBox fx:id="statusFilterBox" spacing="3"/>
+                </HBox>
+                <HBox spacing="4" alignment="CENTER_LEFT">
+                    <Label text="Commission" styleClass="hint-label"/>
+                    <HBox fx:id="commissionFilterBox" spacing="3"/>
+                </HBox>
+            </FlowPane>
+
+            <TableView fx:id="eventsTable" minHeight="120">
                 <VBox.vgrow>
                     <Priority fx:constant="ALWAYS"/>
                 </VBox.vgrow>
@@ -43,6 +48,8 @@
                 <Insets top="8" right="8" bottom="8" left="8"/>
             </padding>
             <Label text="Event details" styleClass="section-title"/>
+            <Label fx:id="detailsHint" styleClass="hint-label" wrapText="true"
+                   text="Viewing only. To trade in this event, open the Users tab and choose a user."/>
             <ScrollPane fx:id="detailsHolder" fitToWidth="true">
                 <VBox.vgrow>
                     <Priority fx:constant="ALWAYS"/>

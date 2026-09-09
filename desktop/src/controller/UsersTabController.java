@@ -1,22 +1,25 @@
 package controller;
 
+import anim.AnimationManager;
 import engine.api.GMEngine;
+import engine.api.dto.CloseResultDTO;
 import engine.api.dto.EventDTO;
 import engine.api.dto.NewEventRequestDTO;
 import engine.api.dto.UserDTO;
 import engine.api.dto.UserEventInvolvementDTO;
-import engine.model.OrderSide;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import util.Dialogs;
 import util.Format;
+import util.Tables;
 import view.CreateEventDialog;
 import view.EventDetailView;
 import view.TradeForms;
@@ -34,12 +37,14 @@ public class UsersTabController {
 
     private GMEngine engine;
     private Runnable onChanged = () -> { };
+    /** Remembered so acting on an event does not silently collapse the pane again. */
+    private boolean fullDetailsExpanded;
 
     @FXML
     private void initialize() {
         buildUsersTable();
         buildUserEventsTable();
-        userDetailsHolder.setContent(new Label("Select a user and one of their events."));
+        userDetailsHolder.setContent(new Label("Load a market file to see users."));
         createEventButton.setDisable(true);
     }
 
@@ -53,44 +58,29 @@ public class UsersTabController {
     }
 
     private void buildUsersTable() {
-        TableColumn<UserDTO, String> name = new TableColumn<>("User");
-        name.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getName()));
-        TableColumn<UserDTO, String> balance = new TableColumn<>("Balance");
-        balance.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                Format.money(c.getValue().getBalance())));
-        TableColumn<UserDTO, String> mm = new TableColumn<>("MM");
-        mm.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().isMarketMaker() ? "yes" : ""));
-        TableColumn<UserDTO, String> blocked = new TableColumn<>("Blocked");
-        blocked.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().isBlocked() ? "yes" : ""));
-
-        usersTable.getColumns().addAll(java.util.List.of(name, balance, mm, blocked));
+        usersTable.getColumns().addAll(java.util.List.of(
+                Tables.text("User", UserDTO::getName),
+                Tables.money("Balance", UserDTO::getBalance),
+                Tables.yesNo("Market maker", UserDTO::isMarketMaker),
+                Tables.yesNo("Blocked", UserDTO::isBlocked)));
         usersTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        usersTable.setPlaceholder(new Label("No users loaded."));
+        usersTable.setPlaceholder(new Label("Load a market file to see users."));
         usersTable.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, selected) -> onUserSelected(selected));
     }
 
     private void buildUserEventsTable() {
-        TableColumn<EventDTO, String> name = new TableColumn<>("Event");
-        name.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getName()));
-        TableColumn<EventDTO, String> status = new TableColumn<>("Status");
-        status.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getStatusLabel()));
-        TableColumn<EventDTO, String> method = new TableColumn<>("Type");
-        method.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getMethodLabel()));
-        TableColumn<EventDTO, String> role = new TableColumn<>("Role");
-        role.setCellValueFactory(c -> {
-            UserDTO user = usersTable.getSelectionModel().getSelectedItem();
-            boolean isMm = user != null && c.getValue().getMarketMakerName().equals(user.getName());
-            return new javafx.beans.property.SimpleStringProperty(isMm ? "market maker" : "participant");
-        });
-
-        userEventsTable.getColumns().addAll(java.util.List.of(name, status, method, role));
+        userEventsTable.getColumns().addAll(java.util.List.of(
+                Tables.text("Event", EventDTO::getName),
+                Tables.text("Status", EventDTO::getStatusLabel),
+                Tables.text("Method", EventDTO::getMethodLabel),
+                Tables.text("Role", event -> {
+                    UserDTO user = usersTable.getSelectionModel().getSelectedItem();
+                    boolean isMm = user != null && event.getMarketMakerName().equals(user.getName());
+                    return isMm ? "market maker" : "participant";
+                })));
         userEventsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        userEventsTable.setPlaceholder(new Label("This user is not involved in any event yet."));
+        userEventsTable.setPlaceholder(new Label("This user is not taking part in any event yet."));
         userEventsTable.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, selected) -> onEventSelected(selected));
     }
@@ -101,7 +91,7 @@ public class UsersTabController {
             userEventsTable.setItems(FXCollections.observableArrayList());
             userDetailsHolder.setContent(new Label("Load a market file to see users."));
             balanceLabel.setText("Balance: -");
-            blockedLabel.setText("");
+            setBlocked(false);
             actionBar.getChildren().clear();
             createEventButton.setDisable(true);
             return;
@@ -135,15 +125,18 @@ public class UsersTabController {
         actionBar.getChildren().clear();
         if (user == null) {
             balanceLabel.setText("Balance: -");
-            blockedLabel.setText("");
+            setBlocked(false);
             userEventsTable.setItems(FXCollections.observableArrayList());
-            userDetailsHolder.setContent(new Label("Select a user."));
+            userDetailsHolder.setContent(new Label("Select a user to see what they are taking part in."));
             createEventButton.setDisable(true);
             return;
         }
         balanceLabel.setText("Balance: " + Format.money(user.getBalance()));
-        blockedLabel.setText(user.isBlocked() ? "BLOCKED" : "");
+        setBlocked(user.isBlocked());
         createEventButton.setDisable(user.isBlocked());
+        createEventButton.setTooltip(user.isBlocked()
+                ? new Tooltip(user.getName() + " is blocked and cannot create events.")
+                : new Tooltip("Create a new event with " + user.getName() + " as its market maker."));
 
         EventDTO previous = userEventsTable.getSelectionModel().getSelectedItem();
         userEventsTable.setItems(FXCollections.observableArrayList(engine.getUserEvents(user.getName())));
@@ -158,6 +151,15 @@ public class UsersTabController {
         onEventSelected(userEventsTable.getSelectionModel().getSelectedItem());
     }
 
+    private void setBlocked(boolean blocked) {
+        blockedLabel.setText(blocked ? "Blocked" : "");
+        blockedLabel.setVisible(blocked);
+        blockedLabel.setManaged(blocked);
+        blockedLabel.setTooltip(blocked
+                ? new Tooltip("This account went below zero and can no longer act.")
+                : null);
+    }
+
     private void onEventSelected(EventDTO event) {
         actionBar.getChildren().clear();
         UserDTO user = usersTable.getSelectionModel().getSelectedItem();
@@ -170,61 +172,103 @@ public class UsersTabController {
         UserEventInvolvementDTO involvement = engine.getUserInvolvement(user.getName(), event.getId());
         content.getChildren().add(UserInvolvementView.build(involvement));
 
-        if (event.isOrderBook()) {
-            content.getChildren().add(EventDetailView.buildOrderBook(
-                    engine.getOrderBookEventState(event.getId())));
-        } else {
-            content.getChildren().add(EventDetailView.buildLmsr(
-                    engine.getLmsrEventState(event.getId())));
-        }
+        // The full event view is available but collapsed, so the part that is
+        // about this user stays visible without scrolling.
+        TitledPane full = new TitledPane("Full event details", event.isOrderBook()
+                ? EventDetailView.buildOrderBook(engine.getOrderBookEventState(event.getId()))
+                : EventDetailView.buildLmsr(engine.getLmsrEventState(event.getId())));
+        full.setExpanded(fullDetailsExpanded);
+        full.expandedProperty().addListener((obs, old, expanded) -> fullDetailsExpanded = expanded);
+        content.getChildren().add(full);
+
         userDetailsHolder.setContent(content);
+        AnimationManager.fadeIn(content);
 
         buildActions(user, event);
     }
 
+    /**
+     * Every action a user could take on this event is shown. Ones that are not
+     * allowed right now are disabled and say why, rather than silently missing.
+     */
     private void buildActions(UserDTO user, EventDTO event) {
         boolean isMarketMaker = event.getMarketMakerName().equals(user.getName());
         String status = event.getStatusLabel();
+        boolean notStarted = "Not started".equals(status);
+        boolean active = "Active".equals(status);
+        boolean closed = "Closed".equals(status);
 
-        if (user.isBlocked()) {
+        if (closed) {
             actionBar.getChildren().add(new Label(
-                    "This user is blocked after going into a negative balance and can no longer act."));
+                    "This event is closed. Its final result is shown below."));
             return;
         }
 
-        if (isMarketMaker && "Not started".equals(status)) {
-            Button open = new Button("Open event");
-            open.setOnAction(e -> run(() -> {
-                engine.openEvent(event.getId(), user.getName());
-                Dialogs.info("Event opened", "'" + event.getName() + "' is now active.");
-            }));
-            actionBar.getChildren().add(open);
-        }
+        double opening = event.getRequiredOpeningFunds();
+        boolean canAfford = user.getBalance() + 1e-9 >= opening;
+        Button open = new Button("Open event");
+        open.setDisable(user.isBlocked() || !isMarketMaker || !notStarted || !canAfford);
+        open.setTooltip(new Tooltip(openReason(user, event, isMarketMaker, notStarted, canAfford, opening)));
+        open.setOnAction(e -> confirmOpen(user, event, opening));
+        actionBar.getChildren().add(open);
 
-        if (isMarketMaker && "Active".equals(status)) {
-            Button close = new Button("Close event...");
-            close.setOnAction(e -> TradeForms.closeEvent(engine, event, user.getName(), this::run));
-            actionBar.getChildren().add(close);
-        }
+        Button close = new Button("Close event...");
+        close.setDisable(user.isBlocked() || !isMarketMaker || !active);
+        close.setTooltip(new Tooltip(user.isBlocked()
+                ? user.getName() + " is blocked and cannot act."
+                : !isMarketMaker
+                        ? "Only " + event.getMarketMakerName() + " can close this event."
+                        : !active ? "The event has not been opened yet."
+                                  : "Decide the winning option and pay the winners."));
+        close.setOnAction(e -> TradeForms.closeEvent(engine, event, user.getName(), this::runClose));
+        actionBar.getChildren().add(close);
 
-        if ("Active".equals(status)) {
+        Button trade = new Button(event.isOrderBook() ? "Place order..." : "Buy shares...");
+        trade.setDisable(user.isBlocked() || !active);
+        trade.setTooltip(new Tooltip(user.isBlocked()
+                ? user.getName() + " is blocked and cannot act."
+                : !active ? "Trading opens once " + event.getMarketMakerName() + " starts the event."
+                          : "Take part in this event."));
+        trade.setOnAction(e -> {
             if (event.isOrderBook()) {
-                Button order = new Button("Place order...");
-                order.setOnAction(e -> TradeForms.placeOrder(engine, event, user.getName(), this::run));
-                actionBar.getChildren().add(order);
+                TradeForms.placeOrder(engine, event, user.getName(), this::run);
             } else {
-                Button buy = new Button("Buy shares...");
-                buy.setOnAction(e -> TradeForms.buyLmsr(engine, event, user.getName(), this::run));
-                actionBar.getChildren().add(buy);
+                TradeForms.buyLmsr(engine, event, user.getName(), this::run);
             }
-        }
+        });
+        actionBar.getChildren().add(trade);
+    }
 
-        if (actionBar.getChildren().isEmpty()) {
-            String reason = "Not started".equals(status)
-                    ? "Waiting for " + event.getMarketMakerName() + " to open this event."
-                    : "This event is closed.";
-            actionBar.getChildren().add(new Label(reason));
+    private String openReason(UserDTO user, EventDTO event, boolean isMarketMaker,
+                              boolean notStarted, boolean canAfford, double opening) {
+        if (user.isBlocked()) {
+            return user.getName() + " is blocked and cannot act.";
         }
+        if (!isMarketMaker) {
+            return "Only " + event.getMarketMakerName() + " can open this event.";
+        }
+        if (!notStarted) {
+            return "This event has already been opened.";
+        }
+        if (!canAfford) {
+            return "Opening costs " + Format.money(opening) + " but "
+                    + user.getName() + " has " + Format.money(user.getBalance()) + ".";
+        }
+        return "Pay " + Format.money(opening) + " to start trading in this event.";
+    }
+
+    private void confirmOpen(UserDTO user, EventDTO event, double opening) {
+        boolean go = Dialogs.confirm("Open '" + event.getName() + "'?",
+                user.getName() + " will pay " + Format.money(opening)
+                        + " into the event account to start it. This cannot be undone.");
+        if (!go) {
+            return;
+        }
+        run(() -> {
+            engine.openEvent(event.getId(), user.getName());
+            Dialogs.info("Event opened",
+                    "'" + event.getName() + "' is now active and open for trading.");
+        });
     }
 
     @FXML
@@ -239,7 +283,8 @@ public class UsersTabController {
             run(() -> {
                 EventDTO created = engine.createEvent(request, user.getName());
                 Dialogs.info("Event created",
-                        "'" + created.getName() + "' was created with " + user.getName() + " as its market maker.");
+                        "'" + created.getName() + "' was created with " + user.getName()
+                                + " as its market maker. It still needs to be opened before trading.");
             });
         }
     }
@@ -252,5 +297,37 @@ public class UsersTabController {
             Dialogs.error("Action refused", String.valueOf(e.getMessage()));
         }
         onChanged.run();
+    }
+
+    /** Closing reports what it actually did before the window reloads. */
+    private void runClose(Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException e) {
+            Dialogs.error("Action refused", String.valueOf(e.getMessage()));
+        }
+        onChanged.run();
+    }
+
+    /** Builds the message shown after an event has been closed. */
+    public static String describeClose(CloseResultDTO result) {
+        StringBuilder message = new StringBuilder();
+        message.append("'").append(result.getWinningOptionName()).append("' won.\n\n");
+        message.append("Winners paid: ").append(result.getWinnersPaid()).append('\n');
+        message.append("Total paid out: ").append(Format.money(result.getTotalPaidOut())).append('\n');
+        if (result.getCommissionCollected() > 0) {
+            message.append("Commission collected: ")
+                    .append(Format.money(result.getCommissionCollected())).append('\n');
+        }
+        if (result.getReturnedToMarketMaker() > 0) {
+            message.append("Returned to the market maker: ")
+                    .append(Format.money(result.getReturnedToMarketMaker())).append('\n');
+        }
+        if (result.getCancelledOrders() > 0) {
+            message.append(result.getCancelledOrders())
+                    .append(result.getCancelledOrders() == 1
+                            ? " resting order was cancelled." : " resting orders were cancelled.");
+        }
+        return message.toString().trim();
     }
 }

@@ -63,7 +63,11 @@ public class OrderBookEvent extends Event {
     }
 
     @Override
-    protected void resolve(int winningIndex, Collection<User> allUsers, User marketMaker) {
+    protected CloseSummary resolve(int winningIndex, Collection<User> allUsers,
+                                   User marketMaker, CloseSummary summary) {
+        summary.recordCancelledOrders(
+                books[0].getBids().size() + books[0].getAsks().size()
+                        + books[1].getBids().size() + books[1].getAsks().size());
         books[0].cancelAll();
         books[1].cancelAll();
 
@@ -83,13 +87,16 @@ public class OrderBookEvent extends Event {
             holding.recordPayout(winningIndex, gross - fee);
             holding.addCommission(fee);
             creditCommission(marketMaker, fee);
+            summary.recordPayout(gross - fee, fee);
         }
 
         double remainder = getAccount().getBalance();
         if (remainder != 0) {
             getAccount().withdraw(remainder);
             marketMaker.receive(remainder);
+            summary.recordReturnedToMarketMaker(remainder);
         }
+        return summary;
     }
 
     /** Brings a freshly minted pair of shares into existence. */

@@ -2,6 +2,7 @@ package view;
 
 import engine.api.GMEngine;
 import engine.api.dto.BuyResultDTO;
+import engine.api.dto.CloseResultDTO;
 import engine.api.dto.EventDTO;
 import engine.api.dto.FillDTO;
 import engine.api.dto.OrderQuoteDTO;
@@ -16,6 +17,7 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import skin.SkinManager;
 import util.Dialogs;
 import util.Format;
 
@@ -149,13 +151,16 @@ public final class TradeForms {
         grid.addRow(0, new Label("Option:"), option);
         grid.addRow(1, new Label("Side:"), side);
         grid.addRow(2, new Label("Quantity:"), quantity);
+        Label priceRange = new Label();
+        priceRange.getStyleClass().add("hint-label");
         grid.addRow(3, new Label("Price per share:"), price);
-        grid.addRow(4, new Label("Order value:"), valueLine);
-        grid.addRow(5, new Label("Commission:"), feeLine);
-        grid.addRow(6, totalCaption, totalLine);
-        grid.addRow(7, haveCaption, haveLine);
-        grid.add(noteLine, 0, 8, 2, 1);
-        grid.add(warningLine, 0, 9, 2, 1);
+        grid.add(priceRange, 1, 4);
+        grid.addRow(5, new Label("Order value:"), valueLine);
+        grid.addRow(6, new Label("Commission:"), feeLine);
+        grid.addRow(7, totalCaption, totalLine);
+        grid.addRow(8, haveCaption, haveLine);
+        grid.add(noteLine, 0, 9, 2, 1);
+        grid.add(warningLine, 0, 10, 2, 1);
         dialog.getDialogPane().setContent(grid);
 
         // Recalculated on every keystroke: buying is checked against the
@@ -176,6 +181,8 @@ public final class TradeForms {
                 OrderQuoteDTO quote = engine.quoteOrder(event.getId(), userName,
                         option.getSelectionModel().getSelectedIndex(), side.getValue(), limit, amount);
 
+                priceRange.setText("Allowed: " + Format.money(0.01)
+                        + " to " + Format.money(quote.getMaxPrice()) + ", in whole cents.");
                 valueLine.setText(Format.money(quote.getOrderValue()));
                 feeLine.setText(quote.isBuying() ? Format.money(quote.getCommission()) : "none when selling");
                 totalCaption.setText(quote.isBuying() ? "Total to pay:" : "You would receive:");
@@ -184,11 +191,11 @@ public final class TradeForms {
                 if (quote.isBuying()) {
                     haveCaption.setText("Your balance:");
                     haveLine.setText(Format.money(quote.getBalance()));
-                    noteLine.setText("At most - matching at a better price costs less.");
+                    noteLine.setText("This is the most you could pay - a match at a better price costs less.");
                 } else {
                     haveCaption.setText("Shares you hold:");
                     haveLine.setText(String.valueOf(quote.getSharesHeld()));
-                    noteLine.setText("At least - matching at a better price pays more.");
+                    noteLine.setText("This is the least you could receive - a match at a better price pays more.");
                 }
 
                 StringBuilder problem = new StringBuilder();
@@ -301,8 +308,8 @@ public final class TradeForms {
             return;
         }
         runner.accept(() -> {
-            engine.closeEvent(event.getId(), userName, index);
-            Dialogs.info("Event closed", "'" + winner + "' won. Winners have been paid.");
+            CloseResultDTO result = engine.closeEvent(event.getId(), userName, index);
+            Dialogs.info("Event closed", controller.UsersTabController.describeClose(result));
         });
     }
 
@@ -314,6 +321,7 @@ public final class TradeForms {
         dialog.setHeaderText(eventName);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         ButtonBar.setButtonData(dialog.getDialogPane().lookupButton(ButtonType.OK), ButtonBar.ButtonData.OK_DONE);
+        SkinManager.style(dialog.getDialogPane());
         return dialog;
     }
 

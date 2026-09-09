@@ -2,6 +2,7 @@ package engine.core.ob;
 
 import engine.api.exception.TradingException;
 import engine.core.Market;
+import engine.model.CommissionType;
 import engine.model.ExecutedTrade;
 import engine.model.Holding;
 import engine.model.Order;
@@ -80,11 +81,19 @@ public class OrderMatcher {
                         trader.getName(), held, event.getOption(optionIndex).getName(), quantity));
             }
         } else {
-            double needed = quantity * price;
+            // The commission is part of what a buyer pays, so it has to be part
+            // of the check too - otherwise an order can be accepted here and
+            // still take the account below zero when it fills.
+            double value = quantity * price;
+            double commission = event.getCommissionType() == CommissionType.ON_PURCHASE
+                    ? value * event.getCommissionPercent() / 100.0
+                    : 0.0;
+            double needed = value + commission;
             if (!trader.canAfford(needed)) {
                 throw new TradingException(String.format(
-                        "%s cannot afford this order: it needs up to %.2f but the account holds only %.2f.",
-                        trader.getName(), needed, trader.getAccount().getBalance()));
+                        "%s cannot afford this order: it needs up to %.2f (%.2f plus %.2f commission)"
+                                + " but the account holds only %.2f.",
+                        trader.getName(), needed, value, commission, trader.getAccount().getBalance()));
             }
         }
     }

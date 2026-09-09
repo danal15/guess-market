@@ -1,29 +1,104 @@
+/* High contrast: pure black ground, yellow structure, white text.
+   Covers the same controls as the other skins so nothing falls back to a
+   light default in the theme that most needs the contrast. */
 .root {
+    -page:        #000000;
+    -surface:     #000000;
+    -raised:      #101010;
+    -line:        #ffffff;
+    -accent:      #ffe100;
+    -accent-ink:  #000000;
+    -ink:         #ffffff;
+    -ink-muted:   #d0d0d0;
+    -good:        #00ff7f;
+    -bad:         #ff5b4f;
+
     -fx-font-family: "Verdana", Arial, sans-serif;
     -fx-font-size: 15px;
-    -fx-background-color: #000000;
-    -fx-text-fill: #ffffff;
+    -fx-background-color: -page;
 }
-.label { -fx-text-fill: #ffffff; }
-.app-title { -fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #ffe100; }
-.section-title { -fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #ffe100; }
-.pane-box { -fx-background-color: #000000; -fx-border-color: #ffffff; -fx-border-width: 2; }
-.header { -fx-background-color: #000000; -fx-border-color: #ffe100; -fx-border-width: 0 0 3 0; }
-.balance-label { -fx-font-weight: bold; -fx-font-size: 18px; -fx-text-fill: #00ff7f; }
-.blocked-label { -fx-text-fill: #ff4136; -fx-font-weight: bold; -fx-font-size: 16px; }
+
+.label { -fx-text-fill: -ink; }
+.app-title { -fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: -accent; }
+.section-title { -fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: -accent; }
+.hint-label { -fx-text-fill: -ink-muted; -fx-font-size: 14px; }
+.balance-label { -fx-font-weight: bold; -fx-font-size: 18px; -fx-text-fill: -good; }
+.blocked-label { -fx-text-fill: -bad; -fx-font-weight: bold; -fx-font-size: 16px; }
+.header { -fx-background-color: -page; -fx-border-color: transparent transparent -accent transparent; -fx-border-width: 0 0 3 0; }
+.pane-box { -fx-background-color: -page; -fx-border-color: -line; -fx-border-width: 2; }
+
 .button, .toggle-button {
-    -fx-background-color: #000000; -fx-text-fill: #ffe100;
-    -fx-border-color: #ffe100; -fx-border-width: 2; -fx-padding: 7 15 7 15;
+    -fx-background-color: -page; -fx-text-fill: -accent;
+    -fx-border-color: -accent; -fx-border-width: 2; -fx-padding: 7 15 7 15;
 }
 .button:hover, .toggle-button:hover { -fx-background-color: #333300; }
-.toggle-button:selected { -fx-background-color: #ffe100; -fx-text-fill: #000000; }
-.text-field { -fx-background-color: #000000; -fx-text-fill: #ffffff; -fx-border-color: #ffffff; }
-.table-view { -fx-background-color: #000000; -fx-border-color: #ffffff; }
-.table-view .column-header-background { -fx-background-color: #000000; }
-.table-view .column-header .label { -fx-text-fill: #ffe100; }
-.table-row-cell { -fx-background-color: #000000; }
-.table-row-cell .text { -fx-fill: #ffffff; }
-.table-row-cell:selected { -fx-background-color: #ffe100; }
-.table-row-cell:selected .text { -fx-fill: #000000; }
-.tab .tab-label { -fx-text-fill: #ffffff; -fx-font-size: 16px; }
-.scroll-pane, .scroll-pane .viewport { -fx-background-color: #000000; }
+.toggle-button:selected { -fx-background-color: -accent; -fx-text-fill: -accent-ink; }
+.button:disabled, .toggle-button:disabled { -fx-opacity: 1; -fx-text-fill: -ink-muted; -fx-border-color: -ink-muted; }
+
+.text-field, .text-area {
+    -fx-background-color: -page; -fx-text-fill: -ink; -fx-border-color: -line; -fx-border-width: 2;
+    -fx-prompt-text-fill: -ink-muted; -fx-highlight-fill: -accent; -fx-highlight-text-fill: -accent-ink;
+}
+.text-area .content { -fx-background-color: -page; }
+
+.choice-box { -fx-background-color: -page; -fx-border-color: -accent; -fx-border-width: 2; }
+.choice-box .label { -fx-text-fill: -ink; }
+.choice-box .open-button .arrow { -fx-background-color: -accent; }
+.context-menu { -fx-background-color: -raised; -fx-border-color: -accent; -fx-border-width: 2; }
+.menu-item .label { -fx-text-fill: -ink; }
+.menu-item:focused { -fx-background-color: -accent; }
+.menu-item:focused .label { -fx-text-fill: -accent-ink; }
+
+.check-box .box { -fx-background-color: -page; -fx-border-color: -line; -fx-border-width: 2; }
+.check-box:selected .box { -fx-background-color: -accent; -fx-border-color: -accent; }
+.check-box:selected .mark { -fx-background-color: -accent-ink; }
+.check-box .text { -fx-fill: -ink; }
+
+.table-view { -fx-background-color: -page; -fx-border-color: -line; -fx-border-width: 2; }
+.table-view .column-header-background { -fx-background-color: -page; }
+.table-view .column-header, .table-view .filler { -fx-background-color: transparent; -fx-border-color: transparent -line -line transparent; }
+.table-view .column-header .label { -fx-text-fill: -accent; -fx-font-weight: bold; }
+.table-row-cell { -fx-background-color: -page; }
+.table-row-cell:odd { -fx-background-color: -raised; }
+.table-row-cell .text { -fx-fill: -ink; }
+.table-row-cell:selected { -fx-background-color: -accent; }
+.table-row-cell:selected .text { -fx-fill: -accent-ink; }
+.table-view .placeholder .label { -fx-text-fill: -ink-muted; }
+.numeric-cell { -fx-alignment: CENTER-RIGHT; }
+
+.scroll-pane, .scroll-pane > .viewport { -fx-background-color: -page; }
+.scroll-bar { -fx-background-color: -page; -fx-border-color: -line; }
+.scroll-bar .thumb { -fx-background-color: -accent; }
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow { -fx-background-color: -accent; }
+.split-pane { -fx-background-color: -page; }
+.split-pane > .split-pane-divider { -fx-background-color: -accent; -fx-padding: 0 2 0 2; }
+.tab-pane > .tab-header-area > .tab-header-background { -fx-background-color: -page; }
+.tab-pane .tab { -fx-background-color: -page; -fx-border-color: -line; }
+.tab-pane .tab:selected { -fx-background-color: -raised; }
+.tab .tab-label { -fx-text-fill: -ink; -fx-font-size: 16px; }
+.tab:selected .tab-label { -fx-text-fill: -accent; }
+.titled-pane > .title { -fx-background-color: -page; -fx-border-color: -accent; -fx-border-width: 2; }
+.titled-pane > .title > .text { -fx-fill: -accent; }
+.titled-pane > .title > .arrow-button .arrow { -fx-background-color: -accent; }
+.titled-pane > .content { -fx-background-color: -page; -fx-border-color: -line; -fx-border-width: 2; }
+.progress-bar > .track { -fx-background-color: -page; -fx-border-color: -line; }
+.progress-bar > .bar { -fx-background-color: -accent; }
+.separator .line { -fx-border-color: -line; }
+.tooltip { -fx-background-color: -raised; -fx-text-fill: -ink; -fx-border-color: -accent; -fx-font-size: 14px; }
+
+.chart { -fx-background-color: -page; }
+.chart-plot-background { -fx-background-color: -page; }
+.chart-vertical-grid-lines, .chart-horizontal-grid-lines { -fx-stroke: #555555; }
+.chart-alternative-row-fill { -fx-fill: transparent; -fx-stroke: transparent; }
+.axis { -fx-tick-label-fill: -ink; -fx-tick-mark-stroke: -line; }
+.axis-label { -fx-text-fill: -accent; }
+.chart-legend { -fx-background-color: -page; }
+.chart-legend-item { -fx-text-fill: -ink; }
+.default-color0.chart-series-line { -fx-stroke: -accent; -fx-stroke-width: 3; }
+.default-color1.chart-series-line { -fx-stroke: #00d5ff; -fx-stroke-width: 3; }
+
+.dialog-pane { -fx-background-color: -page; -fx-border-color: -accent; -fx-border-width: 2; }
+.dialog-pane .header-panel { -fx-background-color: -raised; }
+.dialog-pane .header-panel .label { -fx-text-fill: -accent; -fx-font-size: 17px; -fx-font-weight: bold; }
+.dialog-pane .content, .dialog-pane .content.label, .dialog-pane .label { -fx-text-fill: -ink; }
+.dialog-pane .button-bar .button { -fx-background-color: -page; -fx-text-fill: -accent; }

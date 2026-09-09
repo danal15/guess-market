@@ -1,13 +1,106 @@
+/* Palette. Every rule below refers to these, so a tone is chosen once. */
 .root {
+    -page:        #f2f3f5;
+    -surface:     #ffffff;
+    -raised:      #ffffff;
+    -line:        #d8dbe0;
+    -ink:         #1b2430;
+    -ink-muted:   #5b6470;
+    -accent:      #2f6fb0;
+    -accent-ink:  #ffffff;
+    -good:        #1c7c4a;
+    -bad:         #b3261e;
+
     -fx-font-family: "Segoe UI", Arial, sans-serif;
     -fx-font-size: 12px;
-    -fx-background-color: #f4f5f7;
+    -fx-background-color: -page;
 }
-.app-title { -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #1b2430; }
-.section-title { -fx-font-weight: bold; -fx-text-fill: #1b2430; }
-.pane-box { -fx-background-color: white; }
-.header { -fx-background-color: #e8eaed; }
-.balance-label { -fx-font-weight: bold; -fx-font-size: 14px; }
-.blocked-label { -fx-text-fill: #b3261e; -fx-font-weight: bold; }
-.button, .toggle-button { -fx-background-radius: 4; -fx-padding: 5 12 5 12; }
-.toggle-button:selected { -fx-background-color: #3b6ea5; -fx-text-fill: white; }
+
+.label { -fx-text-fill: -ink; }
+.app-title { -fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: -ink; }
+.section-title { -fx-font-weight: bold; -fx-text-fill: -ink; }
+.hint-label { -fx-text-fill: -ink-muted; -fx-font-size: 11px; }
+.balance-label { -fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: -good; }
+.blocked-label { -fx-text-fill: -bad; -fx-font-weight: bold; }
+.header { -fx-background-color: -surface; -fx-border-color: transparent transparent -line transparent; }
+.pane-box { -fx-background-color: -surface; }
+
+/* buttons */
+.button, .toggle-button {
+    -fx-background-color: -surface; -fx-text-fill: -ink;
+    -fx-border-color: -line; -fx-border-radius: 4; -fx-background-radius: 4;
+    -fx-padding: 5 12 5 12;
+}
+.button:hover, .toggle-button:hover { -fx-background-color: derive(-page, -3%); }
+.toggle-button:selected { -fx-background-color: -accent; -fx-text-fill: -accent-ink; -fx-border-color: -accent; }
+.button:disabled, .toggle-button:disabled { -fx-opacity: 1; -fx-text-fill: derive(-ink-muted, 40%); -fx-border-color: derive(-line, 40%); }
+
+/* text inputs */
+.text-field, .text-area {
+    -fx-background-color: -surface; -fx-text-fill: -ink;
+    -fx-border-color: -line; -fx-border-radius: 3; -fx-background-radius: 3;
+    -fx-prompt-text-fill: -ink-muted;
+}
+.text-area .content { -fx-background-color: -surface; }
+
+/* dropdowns */
+.choice-box { -fx-background-color: -surface; -fx-border-color: -line; -fx-background-radius: 4; -fx-border-radius: 4; }
+.choice-box .label { -fx-text-fill: -ink; }
+.choice-box .context-menu { -fx-background-color: -raised; -fx-border-color: -line; }
+.choice-box .menu-item .label { -fx-text-fill: -ink; }
+.choice-box .menu-item:focused { -fx-background-color: -accent; }
+.choice-box .menu-item:focused .label { -fx-text-fill: -accent-ink; }
+
+/* checkbox */
+.check-box .box { -fx-background-color: -surface; -fx-border-color: -line; -fx-border-radius: 3; }
+.check-box:selected .mark { -fx-background-color: -accent-ink; }
+.check-box:selected .box { -fx-background-color: -accent; -fx-border-color: -accent; }
+.check-box .text { -fx-fill: -ink; }
+
+/* tables */
+.table-view { -fx-background-color: -surface; -fx-border-color: -line; }
+.table-view .column-header-background { -fx-background-color: derive(-page, -2%); }
+.table-view .column-header, .table-view .filler { -fx-background-color: transparent; -fx-border-color: transparent -line -line transparent; }
+.table-view .column-header .label { -fx-text-fill: -ink; -fx-font-weight: bold; }
+.table-row-cell { -fx-background-color: -surface; -fx-border-color: transparent; }
+.table-row-cell:odd { -fx-background-color: derive(-page, 2%); }
+.table-row-cell:selected { -fx-background-color: -accent; }
+.table-row-cell:selected .text { -fx-fill: -accent-ink; }
+.table-view .placeholder .label { -fx-text-fill: -ink-muted; }
+.numeric-cell { -fx-alignment: CENTER-RIGHT; }
+
+/* containers */
+.scroll-pane, .scroll-pane > .viewport { -fx-background-color: -surface; }
+.scroll-bar { -fx-background-color: -page; }
+.scroll-bar .thumb { -fx-background-color: derive(-line, -10%); -fx-background-radius: 4; }
+.split-pane { -fx-background-color: -page; -fx-padding: 0; }
+.split-pane > .split-pane-divider { -fx-background-color: -line; -fx-padding: 0 1 0 1; }
+.tab-pane > .tab-header-area > .tab-header-background { -fx-background-color: derive(-page, -2%); }
+.tab-pane .tab { -fx-background-color: derive(-page, -4%); }
+.tab-pane .tab:selected { -fx-background-color: -surface; }
+.tab .tab-label { -fx-text-fill: -ink; }
+.titled-pane > .title { -fx-background-color: derive(-page, -3%); -fx-border-color: -line; }
+.titled-pane > .title > .text { -fx-fill: -ink; }
+.titled-pane > .content { -fx-background-color: -surface; -fx-border-color: -line; }
+.progress-bar > .track { -fx-background-color: derive(-page, -5%); }
+.progress-bar > .bar { -fx-background-color: -accent; }
+.separator .line { -fx-border-color: -line; }
+.tooltip { -fx-background-color: -ink; -fx-text-fill: -surface; -fx-font-size: 11px; }
+
+/* charts */
+.chart { -fx-background-color: -surface; }
+.chart-plot-background { -fx-background-color: -surface; }
+.chart-vertical-grid-lines, .chart-horizontal-grid-lines { -fx-stroke: derive(-line, 30%); }
+.axis { -fx-tick-label-fill: -ink-muted; }
+.axis-label { -fx-text-fill: -ink; }
+.chart-legend { -fx-background-color: transparent; }
+.chart-legend-item { -fx-text-fill: -ink; }
+.default-color0.chart-series-line { -fx-stroke: -accent; }
+.default-color1.chart-series-line { -fx-stroke: #c2610a; }
+
+/* dialogs */
+.dialog-pane { -fx-background-color: -page; }
+.dialog-pane .header-panel { -fx-background-color: -surface; }
+.dialog-pane .header-panel .label { -fx-text-fill: -ink; -fx-font-size: 13px; -fx-font-weight: bold; }
+.dialog-pane .content, .dialog-pane .content.label { -fx-text-fill: -ink; }
+.dialog-pane .button-bar .button { -fx-background-color: -surface; }

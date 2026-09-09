@@ -1,6 +1,7 @@
 package engine.api;
 
 import engine.api.dto.BuyResultDTO;
+import engine.api.dto.CloseResultDTO;
 import engine.api.dto.EventDTO;
 import engine.api.dto.EventFilterDTO;
 import engine.api.dto.LmsrEventStateDTO;
@@ -48,7 +49,7 @@ public interface GMEngine {
 
     void openEvent(int eventId, String actingUserName);
 
-    void closeEvent(int eventId, String actingUserName, int winningOptionIndex);
+    CloseResultDTO closeEvent(int eventId, String actingUserName, int winningOptionIndex);
 
     /** Works out the cost of a purchase without making it. */
     PurchaseQuoteDTO quoteLmsrPurchase(int eventId, String userName, int optionIndex, long quantity);

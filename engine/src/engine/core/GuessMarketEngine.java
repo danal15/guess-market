@@ -2,6 +2,7 @@ package engine.core;
 
 import engine.api.GMEngine;
 import engine.api.dto.BuyResultDTO;
+import engine.api.dto.CloseResultDTO;
 import engine.api.dto.EventDTO;
 import engine.api.dto.EventFilterDTO;
 import engine.api.dto.FillDTO;
@@ -24,6 +25,7 @@ import engine.api.exception.TradingException;
 import engine.core.ob.OrderMatcher;
 import engine.core.ob.OrderOutcome;
 import engine.core.xml.MarketFileLoader;
+import engine.model.CloseSummary;
 import engine.model.CommissionType;
 import engine.model.Event;
 import engine.model.ExecutedTrade;
@@ -195,10 +197,14 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     @Override
-    public void closeEvent(int eventId, String actingUserName, int winningOptionIndex) {
+    public CloseResultDTO closeEvent(int eventId, String actingUserName, int winningOptionIndex) {
         requireLoaded();
         Event event = market.requireEvent(eventId);
-        event.close(market.requireUser(actingUserName), winningOptionIndex, market.getUsers());
+        CloseSummary summary = event.close(
+                market.requireUser(actingUserName), winningOptionIndex, market.getUsers());
+        return new CloseResultDTO(event.getName(), summary.getWinningOptionName(),
+                summary.getWinnersPaid(), summary.getTotalPaidOut(), summary.getCommissionCollected(),
+                summary.getReturnedToMarketMaker(), summary.getCancelledOrders());
     }
 
     // ---------- trading ----------
@@ -365,7 +371,7 @@ public class GuessMarketEngine implements GMEngine {
                 event.getMethod().getLabel(), event instanceof OrderBookEvent,
                 event.getStatus().getLabel(), event.getMarketMakerName(),
                 event.getOption(0).getName(), event.getOption(1).getName(),
-                event.getAccount().getBalance());
+                event.getAccount().getBalance(), event.requiredOpeningFunds());
     }
 
     private UserDTO toUserDTO(User user) {

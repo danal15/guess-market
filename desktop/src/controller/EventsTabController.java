@@ -1,27 +1,34 @@
 package controller;
 
+import anim.AnimationManager;
 import engine.api.GMEngine;
 import engine.api.dto.EventDTO;
 import engine.api.dto.EventFilterDTO;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import util.Format;
+import util.Tables;
 import view.EventDetailView;
 
 public class EventsTabController {
+
+    private static final String NOTHING_LOADED = "Load a market file to see the events.";
+    private static final String NO_MATCHES = "No events match the current filters.";
+    private static final String FILE_EMPTY = "This file contains no events.";
 
     @FXML private HBox methodFilterBox;
     @FXML private HBox statusFilterBox;
     @FXML private HBox commissionFilterBox;
     @FXML private TableView<EventDTO> eventsTable;
     @FXML private ScrollPane detailsHolder;
+    @FXML private Label detailsHint;
 
     private GMEngine engine;
     private final ToggleGroup methodGroup = new ToggleGroup();
@@ -32,7 +39,9 @@ public class EventsTabController {
     private void initialize() {
         buildFilters();
         buildTable();
-        detailsHolder.setContent(new Label("Select an event to see its details."));
+        detailsHint.setVisible(false);
+        detailsHint.setManaged(false);
+        showDetails(null);
     }
 
     public void setEngine(GMEngine engine) {
@@ -59,7 +68,7 @@ public class EventsTabController {
         button.setToggleGroup(group);
         button.setUserData(value);
         button.setSelected(selected);
-        // Keep one option always chosen: clicking the selected toggle must not clear it.
+        // One option in each row stays chosen: clicking the selected toggle must not clear it.
         button.setOnAction(e -> {
             if (!button.isSelected()) {
                 button.setSelected(true);
@@ -71,39 +80,34 @@ public class EventsTabController {
     }
 
     private void buildTable() {
-        TableColumn<EventDTO, String> name = new TableColumn<>("Event");
-        name.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getName()));
-        TableColumn<EventDTO, String> status = new TableColumn<>("Status");
-        status.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getStatusLabel()));
-        TableColumn<EventDTO, String> method = new TableColumn<>("Type");
-        method.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getMethodLabel()));
-        TableColumn<EventDTO, String> commission = new TableColumn<>("Commission");
-        commission.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                Format.percent(c.getValue().getCommissionPercent()) + " " + c.getValue().getCommissionTypeLabel()));
-        TableColumn<EventDTO, String> account = new TableColumn<>("Account");
-        account.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                Format.money(c.getValue().getAccountBalance())));
-        TableColumn<EventDTO, String> mm = new TableColumn<>("Market maker");
-        mm.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getMarketMakerName()));
-
-        eventsTable.getColumns().addAll(java.util.List.of(name, status, method, commission, account, mm));
+        eventsTable.getColumns().addAll(java.util.List.of(
+                Tables.text("Event", EventDTO::getName),
+                Tables.text("Status", EventDTO::getStatusLabel),
+                Tables.text("Method", EventDTO::getMethodLabel),
+                Tables.text("Commission", event ->
+                        Format.percent(event.getCommissionPercent()) + " " + event.getCommissionTypeLabel()),
+                Tables.money("Event account", EventDTO::getAccountBalance),
+                Tables.text("Market maker", EventDTO::getMarketMakerName)));
         eventsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        eventsTable.setPlaceholder(new Label("No events. Load a market file to begin."));
+        eventsTable.setPlaceholder(new Label(NOTHING_LOADED));
         eventsTable.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, selected) -> showDetails(selected));
     }
 
     public void refresh() {
         if (engine == null || !engine.isLoaded()) {
+            eventsTable.setPlaceholder(new Label(NOTHING_LOADED));
             eventsTable.setItems(FXCollections.observableArrayList());
-            detailsHolder.setContent(new Label("Load a market file to see events."));
+            showDetails(null);
             return;
         }
+
         EventDTO previous = eventsTable.getSelectionModel().getSelectedItem();
         eventsTable.setItems(FXCollections.observableArrayList(engine.getEvents(currentFilter())));
+        // Say why the table is empty rather than telling the user to load a file
+        // they have already loaded.
+        eventsTable.setPlaceholder(new Label(
+                engine.getEvents(EventFilterDTO.all()).isEmpty() ? FILE_EMPTY : NO_MATCHES));
 
         if (previous != null) {
             for (EventDTO candidate : eventsTable.getItems()) {
@@ -128,16 +132,20 @@ public class EventsTabController {
     }
 
     private void showDetails(EventDTO event) {
-        if (event == null) {
-            detailsHolder.setContent(new Label("Select an event to see its details."));
+        boolean hasEvent = event != null;
+        detailsHint.setVisible(hasEvent);
+        detailsHint.setManaged(hasEvent);
+
+        if (!hasEvent) {
+            detailsHolder.setContent(new Label(engine != null && engine.isLoaded()
+                    ? "Select an event to see its details."
+                    : "Load a market file to see the events."));
             return;
         }
-        if (event.isOrderBook()) {
-            detailsHolder.setContent(EventDetailView.buildOrderBook(
-                    engine.getOrderBookEventState(event.getId())));
-        } else {
-            detailsHolder.setContent(EventDetailView.buildLmsr(
-                    engine.getLmsrEventState(event.getId())));
-        }
+        Node content = event.isOrderBook()
+                ? EventDetailView.buildOrderBook(engine.getOrderBookEventState(event.getId()))
+                : EventDetailView.buildLmsr(engine.getLmsrEventState(event.getId()));
+        detailsHolder.setContent(content);
+        AnimationManager.fadeIn(content);
     }
 }

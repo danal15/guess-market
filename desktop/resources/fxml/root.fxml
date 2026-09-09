@@ -13,43 +13,42 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
-<?import javafx.scene.layout.VBox?>
 
 <BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="controller.RootController">
 
+    <!-- One header row: the title sits with the controls rather than taking a
+         full width row of its own. -->
     <top>
-        <VBox spacing="4" styleClass="header">
+        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="header">
             <padding>
-                <Insets top="10" right="12" bottom="8" left="12"/>
+                <Insets top="8" right="12" bottom="8" left="12"/>
             </padding>
 
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <Button fx:id="loadButton" text="Load File" onAction="#onLoadFile"/>
-                <TextField fx:id="filePathField" editable="false" promptText="No file loaded">
-                    <HBox.hgrow>
-                        <Priority fx:constant="ALWAYS"/>
-                    </HBox.hgrow>
-                </TextField>
-                <ProgressBar fx:id="progressBar" prefWidth="140"/>
-                <Label fx:id="progressLabel"/>
-                <Separator orientation="VERTICAL"/>
-                <Label text="Skin:"/>
-                <ChoiceBox fx:id="skinChoice"/>
-                <CheckBox fx:id="animationsCheck" text="Animations"/>
-            </HBox>
-
-            <Label text="Guess Market" maxWidth="Infinity" alignment="CENTER" styleClass="app-title"/>
-        </VBox>
+            <Label text="Guess Market" styleClass="app-title"/>
+            <Separator orientation="VERTICAL"/>
+            <Button fx:id="loadButton" text="Load File" onAction="#onLoadFile"/>
+            <TextField fx:id="filePathField" editable="false" promptText="No file loaded">
+                <HBox.hgrow>
+                    <Priority fx:constant="ALWAYS"/>
+                </HBox.hgrow>
+            </TextField>
+            <ProgressBar fx:id="progressBar" prefWidth="130"/>
+            <Label fx:id="progressLabel" styleClass="hint-label"/>
+            <Separator orientation="VERTICAL"/>
+            <Label text="Skin"/>
+            <ChoiceBox fx:id="skinChoice"/>
+            <CheckBox fx:id="animationsCheck" text="Animations"/>
+        </HBox>
     </top>
 
     <center>
         <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE">
             <tabs>
-                <Tab fx:id="eventsTab" text="Events">
+                <Tab text="Events">
                     <fx:include fx:id="eventsPane" source="events-tab.fxml"/>
                 </Tab>
-                <Tab fx:id="usersTab" text="Users">
+                <Tab text="Users">
                     <fx:include fx:id="usersPane" source="users-tab.fxml"/>
                 </Tab>
             </tabs>

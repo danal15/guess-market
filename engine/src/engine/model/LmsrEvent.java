@@ -118,7 +118,8 @@ public class LmsrEvent extends Event {
     }
 
     @Override
-    protected void resolve(int winningIndex, Collection<User> allUsers, User marketMaker) {
+    protected CloseSummary resolve(int winningIndex, Collection<User> allUsers,
+                                   User marketMaker, CloseSummary summary) {
         for (User user : allUsers) {
             Holding holding = user.existingHolding(getId());
             if (holding == null) {
@@ -135,13 +136,16 @@ public class LmsrEvent extends Event {
             holding.recordPayout(winningIndex, gross - fee);
             holding.addCommission(fee);
             creditCommission(marketMaker, fee);
+            summary.recordPayout(gross - fee, fee);
         }
 
         double remainder = getAccount().getBalance();
         if (remainder > 0) {
             getAccount().withdraw(remainder);
             marketMaker.receive(remainder);
+            summary.recordReturnedToMarketMaker(remainder);
         }
+        return summary;
     }
 
     public int getB() {

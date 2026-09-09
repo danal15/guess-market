@@ -14,8 +14,10 @@ public final class EventDTO {
     private final String option1Name;
     private final String option2Name;
     private final double accountBalance;
+    private final double requiredOpeningFunds;
 
-    public EventDTO(int id, String name, String description, int commissionPercent, String commissionTypeLabel, String methodLabel, boolean orderBook, String statusLabel, String marketMakerName, String option1Name, String option2Name, double accountBalance) {
+    public EventDTO(int id, String name, String description, int commissionPercent, String commissionTypeLabel, String methodLabel, boolean orderBook, String statusLabel, String marketMakerName, String option1Name, String option2Name, double accountBalance,
+                     double requiredOpeningFunds) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -28,6 +30,7 @@ public final class EventDTO {
         this.option1Name = option1Name;
         this.option2Name = option2Name;
         this.accountBalance = accountBalance;
+        this.requiredOpeningFunds = requiredOpeningFunds;
     }
 
     public int getId() {
@@ -76,5 +79,10 @@ public final class EventDTO {
 
     public double getAccountBalance() {
         return accountBalance;
+    }
+
+    /** What the market maker must pay to open this event. */
+    public double getRequiredOpeningFunds() {
+        return requiredOpeningFunds;
     }
 }

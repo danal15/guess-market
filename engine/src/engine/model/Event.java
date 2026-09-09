@@ -52,7 +52,8 @@ public abstract class Event implements Serializable {
     protected abstract void fundOpening(User marketMaker);
 
     /** Pays out the winners; called only by close(). */
-    protected abstract void resolve(int winningIndex, Collection<User> allUsers, User marketMaker);
+    protected abstract CloseSummary resolve(int winningIndex, Collection<User> allUsers,
+                                            User marketMaker, CloseSummary summary);
 
     public void open(User marketMaker) {
         requireMarketMaker(marketMaker);
@@ -70,15 +71,20 @@ public abstract class Event implements Serializable {
         status = EventStatus.ACTIVE;
     }
 
-    public void close(User marketMaker, int winningIndex, Collection<User> allUsers) {
+    public CloseSummary close(User marketMaker, int winningIndex, Collection<User> allUsers) {
         requireMarketMaker(marketMaker);
+        // Closing pays out every winner and cannot be undone, so it is held to
+        // the same standard as every other action a blocked user may not take.
+        marketMaker.requireActive();
         checkOptionIndex(winningIndex);
         if (status != EventStatus.ACTIVE) {
             throw new TradingException("Event '" + name + "' is not active, so it cannot be closed.");
         }
-        resolve(winningIndex, allUsers, marketMaker);
+        CloseSummary summary = new CloseSummary(getOption(winningIndex).getName());
+        resolve(winningIndex, allUsers, marketMaker, summary);
         winningOptionIndex = winningIndex;
         status = EventStatus.CLOSED;
+        return summary;
     }
 
     public void requireActiveForTrading() {

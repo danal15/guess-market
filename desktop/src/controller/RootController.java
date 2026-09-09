@@ -8,9 +8,9 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import skin.SkinManager;
@@ -26,8 +26,6 @@ public class RootController {
     @FXML private ProgressBar progressBar;
     @FXML private Label progressLabel;
     @FXML private TabPane tabPane;
-    @FXML private Tab eventsTab;
-    @FXML private Tab usersTab;
     @FXML private ChoiceBox<SkinManager.Skin> skinChoice;
     @FXML private CheckBox animationsCheck;
 
@@ -36,18 +34,27 @@ public class RootController {
     @FXML private UsersTabController usersPaneController;
 
     private GMEngine engine;
+    private File lastDirectory;
 
     @FXML
     private void initialize() {
+        // Idle progress controls should take no space at all, rather than
+        // leaving a permanent gap in the busiest row of the window.
         progressBar.setVisible(false);
-        progressLabel.setText("");
+        progressBar.managedProperty().bind(progressBar.visibleProperty());
+        progressLabel.setVisible(false);
+        progressLabel.managedProperty().bind(progressLabel.visibleProperty());
+
+        filePathField.setTooltip(new Tooltip("No file loaded yet."));
 
         skinChoice.getItems().addAll(SkinManager.Skin.values());
         skinChoice.getSelectionModel().select(SkinManager.Skin.DEFAULT);
+        skinChoice.setTooltip(new Tooltip("Change the colours and fonts of the whole window."));
         skinChoice.setOnAction(e -> applySkin());
 
         animationsCheck.setSelected(false);
         AnimationManager.setEnabled(false);
+        animationsCheck.setTooltip(new Tooltip("Short animations when panels change. Off by default."));
         animationsCheck.setOnAction(e -> AnimationManager.setEnabled(animationsCheck.isSelected()));
     }
 
@@ -70,18 +77,30 @@ public class RootController {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Choose a Guess Market file");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("XML files", "*.xml"));
+        File startIn = lastDirectory != null ? lastDirectory : defaultDirectory();
+        if (startIn != null && startIn.isDirectory()) {
+            chooser.setInitialDirectory(startIn);
+        }
         Window window = loadButton.getScene() == null ? null : loadButton.getScene().getWindow();
         File chosen = chooser.showOpenDialog(window);
         if (chosen == null) {
             return;
         }
+        lastDirectory = chosen.getParentFile();
         startLoad(chosen.getAbsolutePath());
+    }
+
+    /** The samples that ship beside the jar, so the first load has somewhere to start. */
+    private File defaultDirectory() {
+        File samples = new File(System.getProperty("user.dir"), "sample-files");
+        return samples.isDirectory() ? samples : null;
     }
 
     private void startLoad(String path) {
         LoadFileTask loadTask = new LoadFileTask(engine, path);
 
         progressBar.setVisible(true);
+        progressLabel.setVisible(true);
         progressBar.progressProperty().bind(loadTask.progressProperty());
         progressLabel.textProperty().bind(loadTask.messageProperty());
         setBusy(true);
@@ -89,7 +108,7 @@ public class RootController {
         loadTask.setOnSucceeded(e -> {
             unbindProgress();
             setBusy(false);
-            filePathField.setText(engine.getLoadedFilePath());
+            showLoadedFile(engine.getLoadedFilePath());
             refreshAll();
             AnimationManager.pulse(filePathField);
         });
@@ -107,10 +126,22 @@ public class RootController {
         thread.start();
     }
 
+    /** The name identifies the file; the full path is context, so it goes in a tooltip. */
+    private void showLoadedFile(String path) {
+        if (path == null) {
+            filePathField.setText("");
+            filePathField.setTooltip(new Tooltip("No file loaded yet."));
+            return;
+        }
+        filePathField.setText(new File(path).getName());
+        filePathField.setTooltip(new Tooltip(path));
+    }
+
     private void unbindProgress() {
         progressBar.progressProperty().unbind();
         progressLabel.textProperty().unbind();
         progressBar.setVisible(false);
+        progressLabel.setVisible(false);
         progressLabel.setText("");
     }
 

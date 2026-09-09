@@ -10,6 +10,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import skin.SkinManager;
 import util.Dialogs;
 
 import java.util.Optional;
@@ -25,6 +26,7 @@ public final class CreateEventDialog {
         dialog.setTitle("Create a new event");
         dialog.setHeaderText(ownerName + " will be the market maker of this event.");
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        SkinManager.style(dialog.getDialogPane());
 
         TextField name = new TextField();
         TextArea description = new TextArea();
@@ -68,15 +70,18 @@ public final class CreateEventDialog {
         grid.add(allowMint, 1, row);
         dialog.getDialogPane().setContent(grid);
 
+        // Hidden rows must also be unmanaged, otherwise they leave empty gaps
+        // and the dialog never resizes to fit the method that is chosen.
         Runnable syncMethodFields = () -> {
             boolean orderBook = "Order Book".equals(method.getValue());
-            bLabel.setVisible(!orderBook);
-            b.setVisible(!orderBook);
-            dLabel.setVisible(orderBook);
-            baseValue.setVisible(orderBook);
-            initialLabel.setVisible(orderBook);
-            initial.setVisible(orderBook);
-            allowMint.setVisible(orderBook);
+            show(bLabel, !orderBook);
+            show(b, !orderBook);
+            show(dLabel, orderBook);
+            show(baseValue, orderBook);
+            show(initialLabel, orderBook);
+            show(initial, orderBook);
+            show(allowMint, orderBook);
+            dialog.getDialogPane().getScene().getWindow().sizeToScene();
         };
         method.setOnAction(e -> syncMethodFields.run());
         syncMethodFields.run();
@@ -110,6 +115,11 @@ public final class CreateEventDialog {
         return new NewEventRequestDTO(name.getText(), description.getText(), commissionPercent,
                 commissionType.getValue(), option1.getText(), option2.getText(),
                 orderBook, bValue, dValue, initialValue, allowMint.isSelected());
+    }
+
+    private static void show(javafx.scene.Node node, boolean visible) {
+        node.setVisible(visible);
+        node.setManaged(visible);
     }
 
     private static Integer parseInt(String text, String what) {

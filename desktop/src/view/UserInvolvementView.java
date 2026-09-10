@@ -23,21 +23,17 @@ public final class UserInvolvementView {
         title.getStyleClass().add("section-title");
         box.getChildren().add(title);
 
+        boolean closed = involvement.getWinningOptionName() != null;
         if (involvement.isOrderBook()) {
-            GridPane grid = new GridPane();
-            grid.setHgap(14);
-            grid.setVgap(3);
-            grid.addRow(0, header("Option"), header("Shares held"), header("Paid for them"));
-            grid.addRow(1, new Label(involvement.getOption1Name()),
-                    new Label(String.valueOf(involvement.getOption1Quantity())),
-                    new Label(Format.money(involvement.getOption1Paid())));
-            grid.addRow(2, new Label(involvement.getOption2Name()),
-                    new Label(String.valueOf(involvement.getOption2Quantity())),
-                    new Label(Format.money(involvement.getOption2Paid())));
-            box.getChildren().add(grid);
+            box.getChildren().add(optionTotals(involvement, "Shares held"));
         } else {
             box.getChildren().add(new Label("Your trades in this event:"));
             box.getChildren().add(EventDetailView.tradesTable(involvement.getTradesNewestFirst()));
+            // Once the event is decided the running total per option says more
+            // than the individual rows, which by then can be a long list.
+            if (closed) {
+                box.getChildren().add(optionTotals(involvement, "Shares bought"));
+            }
         }
 
         box.getChildren().add(new Label("Commission you paid: " + Format.money(involvement.getCommissionPaid())));
@@ -52,7 +48,7 @@ public final class UserInvolvementView {
             box.getChildren().add(waiting);
         }
 
-        if (involvement.getWinningOptionName() != null) {
+        if (closed) {
             box.getChildren().add(new Label("Winning option: " + involvement.getWinningOptionName()));
             if (involvement.getProfitOrLoss() == null) {
                 // Never traded here, so there is no position to report a result on.
@@ -113,6 +109,21 @@ public final class UserInvolvementView {
         note.getStyleClass().add("hint-label");
         box.getChildren().add(note);
         return box;
+    }
+
+    /** What the user ended up holding in each option, and what it cost them. */
+    private static GridPane optionTotals(UserEventInvolvementDTO involvement, String quantityHeader) {
+        GridPane grid = new GridPane();
+        grid.setHgap(14);
+        grid.setVgap(3);
+        grid.addRow(0, header("Option"), header(quantityHeader), header("Paid for them"));
+        grid.addRow(1, new Label(involvement.getOption1Name()),
+                new Label(String.valueOf(involvement.getOption1Quantity())),
+                new Label(Format.money(involvement.getOption1Paid())));
+        grid.addRow(2, new Label(involvement.getOption2Name()),
+                new Label(String.valueOf(involvement.getOption2Quantity())),
+                new Label(Format.money(involvement.getOption2Paid())));
+        return grid;
     }
 
     private static Label header(String text) {

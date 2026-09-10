@@ -11,6 +11,7 @@ import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
+import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
@@ -23,6 +24,11 @@ import javafx.stage.Stage;
 import skin.SkinManager;
 import util.Dialogs;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -98,11 +104,38 @@ public class MainApp extends Application {
                 size * (mark.length() == 1 ? 0.72 : 0.46)));
         g.fillText(mark, size / 2.0, size * (mark.length() == 1 ? 0.76 : 0.66));
 
-        WritableImage image = new WritableImage(size, size);
+        WritableImage drawn = new WritableImage(size, size);
         SnapshotParameters params = new SnapshotParameters();
         params.setFill(Color.TRANSPARENT);
-        canvas.snapshot(params, image);
-        return image;
+        canvas.snapshot(params, drawn);
+        return asLoadedImage(drawn);
+    }
+
+    /**
+     * A window icon only reaches the desktop when the image was read from a
+     * stream. One produced by drawing on a canvas is accepted by the stage and
+     * then quietly dropped, which leaves the window with the runtime's own icon
+     * instead of this one. Encoding the same pixels as a PNG and reading them
+     * back is what makes it stick.
+     */
+    private Image asLoadedImage(WritableImage drawn) {
+        int width = (int) drawn.getWidth();
+        int height = (int) drawn.getHeight();
+        BufferedImage buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        PixelReader pixels = drawn.getPixelReader();
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                buffer.setRGB(x, y, pixels.getArgb(x, y));
+            }
+        }
+        try {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            ImageIO.write(buffer, "png", bytes);
+            return new Image(new ByteArrayInputStream(bytes.toByteArray()));
+        } catch (IOException e) {
+            // An icon is not worth failing to start over.
+            return drawn;
+        }
     }
 
     private void installExceptionHandler() {

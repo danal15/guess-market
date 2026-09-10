@@ -209,7 +209,9 @@ public class UsersTabController {
         content.getChildren().add(full);
 
         userDetailsHolder.setContent(content);
-        AnimationManager.fadeIn(content);
+        // The events screen fades its details in; this panel is rebuilt on every
+        // action, so it slides instead and the two screens stay tellable apart.
+        AnimationManager.slideIn(content);
 
         buildActions(user, event);
     }

@@ -12,10 +12,10 @@
     <orderEntry type="module-library">
       <library name="javafx">
         <CLASSES>
-          <root url="jar://$PROJECT_DIR$/lib/javafx/lib/javafx.base.jar!/" />
-          <root url="jar://$PROJECT_DIR$/lib/javafx/lib/javafx.graphics.jar!/" />
-          <root url="jar://$PROJECT_DIR$/lib/javafx/lib/javafx.controls.jar!/" />
-          <root url="jar://$PROJECT_DIR$/lib/javafx/lib/javafx.fxml.jar!/" />
+          <root url="jar://$MODULE_DIR$/../lib/javafx/lib/javafx.base.jar!/" />
+          <root url="jar://$MODULE_DIR$/../lib/javafx/lib/javafx.graphics.jar!/" />
+          <root url="jar://$MODULE_DIR$/../lib/javafx/lib/javafx.controls.jar!/" />
+          <root url="jar://$MODULE_DIR$/../lib/javafx/lib/javafx.fxml.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />

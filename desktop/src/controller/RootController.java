@@ -25,7 +25,6 @@ public class RootController {
 
     @FXML private Button loadButton;
     @FXML private Button saveStateButton;
-    @FXML private Button loadStateButton;
     @FXML private TextField filePathField;
     @FXML private ProgressBar progressBar;
     @FXML private Label progressLabel;
@@ -76,22 +75,53 @@ public class RootController {
         }
     }
 
+    /**
+     * One button for both kinds of file. A market file is read and validated
+     * from scratch; a saved market is restored as it was left. Which one it is
+     * follows from the name, so there is nothing for the user to choose.
+     */
     @FXML
     private void onLoadFile() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Choose a Guess Market file");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("XML files", "*.xml"));
+        chooser.setTitle("Choose a market file or saved progress");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Market files and saved progress",
+                        "*.xml", "*" + STATE_SUFFIX),
+                new FileChooser.ExtensionFilter("Market files", "*.xml"),
+                new FileChooser.ExtensionFilter("Saved progress", "*" + STATE_SUFFIX));
         File startIn = lastDirectory != null ? lastDirectory : defaultDirectory();
         if (startIn != null && startIn.isDirectory()) {
             chooser.setInitialDirectory(startIn);
         }
-        Window window = loadButton.getScene() == null ? null : loadButton.getScene().getWindow();
-        File chosen = chooser.showOpenDialog(window);
+        File chosen = chooser.showOpenDialog(windowOf(loadButton));
         if (chosen == null) {
             return;
         }
         lastDirectory = chosen.getParentFile();
-        startLoad(chosen.getAbsolutePath());
+        openChosenFile(chosen);
+    }
+
+    /** Sends the file down whichever path its name calls for. */
+    private void openChosenFile(File chosen) {
+        String name = chosen.getName().toLowerCase();
+        if (name.endsWith(STATE_SUFFIX)) {
+            try {
+                engine.loadState(withoutSuffix(chosen));
+                showLoadedFile(chosen.getAbsolutePath());
+                refreshAll();
+                AnimationManager.pulse(filePathField);
+            } catch (RuntimeException e) {
+                Dialogs.error("The saved progress was not loaded", String.valueOf(e.getMessage()));
+            }
+            return;
+        }
+        if (name.endsWith(".xml")) {
+            startLoad(chosen.getAbsolutePath());
+            return;
+        }
+        Dialogs.error("That file cannot be opened",
+                "Choose either a market file ending in .xml or saved progress ending in "
+                        + STATE_SUFFIX + ".");
     }
 
     /**
@@ -123,31 +153,6 @@ public class RootController {
             Dialogs.info("Progress saved", "The market was saved to " + chosen.getName() + ".");
         } catch (RuntimeException e) {
             Dialogs.error("Could not save", String.valueOf(e.getMessage()));
-        }
-    }
-
-    /** Replaces whatever is loaded with a market saved earlier. */
-    @FXML
-    private void onLoadState() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Load progress");
-        chooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Guess Market progress", "*" + STATE_SUFFIX));
-        if (lastDirectory != null && lastDirectory.isDirectory()) {
-            chooser.setInitialDirectory(lastDirectory);
-        }
-        File chosen = chooser.showOpenDialog(windowOf(loadStateButton));
-        if (chosen == null) {
-            return;
-        }
-        lastDirectory = chosen.getParentFile();
-        try {
-            engine.loadState(withoutSuffix(chosen));
-            filePathField.setText(chosen.getAbsolutePath());
-            refreshAll();
-            Dialogs.info("Progress loaded", "Picked up where " + chosen.getName() + " left off.");
-        } catch (RuntimeException e) {
-            Dialogs.error("Could not load", String.valueOf(e.getMessage()));
         }
     }
 
@@ -223,7 +228,6 @@ public class RootController {
         // Saving or reloading in the middle of a load would work on a market
         // that is being replaced underneath it.
         saveStateButton.setDisable(busy);
-        loadStateButton.setDisable(busy);
         tabPane.setDisable(busy);
     }
 

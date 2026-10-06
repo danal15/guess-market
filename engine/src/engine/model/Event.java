@@ -81,9 +81,13 @@ public abstract class Event implements Serializable {
             throw new TradingException("Event '" + name + "' is not active, so it cannot be closed.");
         }
         CloseSummary summary = new CloseSummary(getOption(winningIndex).getName());
-        resolve(winningIndex, allUsers, marketMaker, summary);
+        // Marked closed before the money moves, not after. Paying out is a long
+        // walk over every user, and if anything went wrong half way through it
+        // the event would otherwise still look active - so the market maker
+        // could close it a second time and pay the winners twice.
         winningOptionIndex = winningIndex;
         status = EventStatus.CLOSED;
+        resolve(winningIndex, allUsers, marketMaker, summary);
         return summary;
     }
 

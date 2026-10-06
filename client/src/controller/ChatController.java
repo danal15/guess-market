@@ -51,27 +51,14 @@ public class ChatController {
         if (snapshot.getNewChatMessages().isEmpty()) {
             return;
         }
-        boolean atBottom = isScrolledToBottom();
         for (ChatMessageDTO message : snapshot.getNewChatMessages()) {
             lines.add("[" + message.getTime() + "]  " + message.getUserName()
                     + ":  " + message.getText());
         }
-        // Follow the conversation only if the reader was already at the end; if
-        // they scrolled up to read something, leave them there.
-        if (atBottom) {
-            messageList.scrollTo(lines.size() - 1);
-        }
-    }
-
-    private boolean isScrolledToBottom() {
-        return lines.isEmpty() || messageList.getItems().size() - 1
-                <= lastVisibleIndex() + 1;
-    }
-
-    private int lastVisibleIndex() {
-        // There is no public way to ask, so the selection is used as a stand in;
-        // being wrong here only means the view does or does not follow along.
-        return messageList.getItems().size() - 1;
+        // Always follows the conversation. There is no supported way to ask a
+        // ListView whether the reader has scrolled up, and guessing it wrong
+        // would be worse than this: a chat that quietly stops showing new lines.
+        messageList.scrollTo(lines.size() - 1);
     }
 
     @FXML

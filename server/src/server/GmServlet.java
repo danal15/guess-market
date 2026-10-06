@@ -101,7 +101,18 @@ public abstract class GmServlet extends HttpServlet {
         if (name == null) {
             throw new NotLoggedIn("You are not logged in. Log in and try again.");
         }
-        return (String) name;
+        // A session can outlive the market it belonged to: the container may
+        // bring sessions back when it restarts, but nothing here is saved, so
+        // the user it names is gone. That is not logged in, whatever the cookie
+        // says, and saying so sends the client back to the login screen instead
+        // of leaving it arguing with a market that has never heard of it.
+        String userName = (String) name;
+        if (!engine().knowsUser(userName)) {
+            session.invalidate();
+            throw new NotLoggedIn("The server has been restarted, so everything was"
+                    + " cleared. Log in again.");
+        }
+        return userName;
     }
 
     protected String required(HttpServletRequest request, String parameter) {

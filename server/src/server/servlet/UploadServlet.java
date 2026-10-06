@@ -33,6 +33,7 @@ public class UploadServlet extends GmServlet {
         respond(response, () -> {
             String user = currentUser(request);
             Part filePart = firstPart(request);
+            requireXmlName(nameOf(filePart));
             try (InputStream content = filePart.getInputStream()) {
                 List<String> added = engine().uploadMarketFile(content, user);
                 return new Loaded(nameOf(filePart), added);
@@ -47,6 +48,19 @@ public class UploadServlet extends GmServlet {
             }
         }
         throw new IllegalArgumentException("No file arrived with the request.");
+    }
+
+    /**
+     * Checked here as well as in the client, because the exercise asks for the
+     * exercise 1 file checks to happen when the content reaches the server, and
+     * because the servlets are meant to stand up on their own to a tool like
+     * Postman.
+     */
+    private void requireXmlName(String fileName) {
+        if (!fileName.toLowerCase().endsWith(".xml")) {
+            throw new IllegalArgumentException("An events file has to end in .xml, and '"
+                    + fileName + "' does not.");
+        }
     }
 
     private String nameOf(Part part) {

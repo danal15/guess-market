@@ -62,6 +62,13 @@ public class MarketClient implements GMEngine {
     }
 
     @Override
+    public boolean knowsUser(String name) {
+        // The server answers this for itself on every request; asking it
+        // directly is only here to honour the interface.
+        return userName != null && userName.equals(name);
+    }
+
+    @Override
     public UserDTO loadFunds(String name, double amount) {
         return transport.post("/funds", UserDTO.class, "amount", amount);
     }

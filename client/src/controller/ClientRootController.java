@@ -16,6 +16,8 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
 import javafx.util.Duration;
 import net.MarketClient;
+import net.NotLoggedInException;
+import net.ServerRefusedException;
 import skin.SkinManager;
 import util.Format;
 
@@ -53,6 +55,9 @@ public class ClientRootController {
 
     /** One request at a time: a slow answer must not pile the next one on top of it. */
     private final AtomicBoolean polling = new AtomicBoolean();
+
+    /** Set when a refresh was asked for while one was already in flight. */
+    private final AtomicBoolean refreshWanted = new AtomicBoolean();
 
     /** So a server that has gone away is reported once, not once a second. */
     private boolean offlineReported;
@@ -101,8 +106,13 @@ public class ClientRootController {
         }
     }
 
-    /** Asks for a fresh picture at once, after this user has done something. */
+    /**
+     * Asks for a fresh picture at once, after this user has done something. If a
+     * refresh is already running the request is remembered rather than dropped,
+     * so a trade is never followed by a screen still showing the old numbers.
+     */
     public void refreshNow() {
+        refreshWanted.set(true);
         poll();
     }
 
@@ -110,28 +120,41 @@ public class ClientRootController {
         if (!polling.compareAndSet(false, true)) {
             return;
         }
+        refreshWanted.set(false);
         Integer selected = selectedEventId();
         int chatFrom = chatBoxController.messagesHeld();
 
         Thread worker = new Thread(() -> {
             SnapshotDTO snapshot = null;
             String failure = null;
+            boolean unreachable = false;
             try {
                 snapshot = client.getSnapshot(client.getUserName(), selected, chatFrom);
+            } catch (NotLoggedInException e) {
+                failure = String.valueOf(e.getMessage());
+            } catch (ServerRefusedException e) {
+                failure = String.valueOf(e.getMessage());
+                unreachable = true;
             } catch (RuntimeException e) {
+                // The server answered, it just would not do it - most likely it
+                // has been restarted and no longer knows who we are.
                 failure = String.valueOf(e.getMessage());
             }
             SnapshotDTO received = snapshot;
             String problem = failure;
+            boolean offline = unreachable;
             Platform.runLater(() -> {
                 try {
                     if (received != null) {
                         apply(received);
                     } else {
-                        reportOffline(problem);
+                        reportProblem(problem, offline);
                     }
                 } finally {
                     polling.set(false);
+                    if (refreshWanted.get()) {
+                        poll();
+                    }
                 }
             });
         }, "guess-market-pull");
@@ -170,15 +193,17 @@ public class ClientRootController {
     }
 
     /**
-     * A server that cannot be reached is said once, in the top bar. Popping a
-     * dialog on every failed poll would bury the window in them.
+     * Trouble is said once, quietly, in the top bar. A dialog on every failed
+     * poll would bury the window in them within half a minute.
      */
-    private void reportOffline(String problem) {
-        statusLabel.setText("Not connected to the server - retrying");
+    private void reportProblem(String problem, boolean unreachable) {
+        statusLabel.setText(unreachable
+                ? "Not connected to the server - retrying"
+                : problem == null ? "The server refused the request" : problem);
         statusLabel.setTooltip(new Tooltip(problem == null ? "" : problem));
         if (!offlineReported) {
             offlineReported = true;
-            System.err.println("Pull failed: " + problem);
+            System.err.println("Refresh failed: " + problem);
         }
     }
 

@@ -91,11 +91,19 @@ public class OrderBookEvent extends Event {
         }
 
         double remainder = getAccount().getBalance();
-        if (remainder != 0) {
+        if (remainder > 0) {
             getAccount().withdraw(remainder);
             marketMaker.receive(remainder, "Event account balance, returned", getName());
             marketMaker.holdingFor(getId()).recordMarketMakerReceived(remainder);
             summary.recordReturnedToMarketMaker(remainder);
+        } else if (remainder < 0) {
+            // Every pair of shares cost d to bring into existence and pays d out
+            // again, so the account should land exactly on zero - but a mint
+            // splits that d between two prices, and in binary the two halves do
+            // not always add back to the whole. What is left is a fraction of a
+            // fraction of a cent that nobody is owed, so the account is levelled
+            // rather than the close failing over it.
+            getAccount().deposit(-remainder);
         }
         return summary;
     }

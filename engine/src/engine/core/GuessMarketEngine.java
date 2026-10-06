@@ -105,6 +105,9 @@ public class GuessMarketEngine implements GMEngine {
     public synchronized List<String> uploadMarketFile(InputStream xml, String uploaderName) {
         requireLoaded();
         User uploader = market.requireUser(uploaderName);
+        // Uploading makes the uploader market maker of everything in the file,
+        // which is an action like any other and is not open to a blocked account.
+        uploader.requireActive();
         List<Event> added = MarketFileLoader.loadInto(market, xml, uploader.getName());
         List<String> names = new ArrayList<>();
         for (Event event : added) {
@@ -130,6 +133,11 @@ public class GuessMarketEngine implements GMEngine {
         User user = new User(name, STARTING_BALANCE);
         market.addUser(user);
         return toUserDTO(user);
+    }
+
+    @Override
+    public synchronized boolean knowsUser(String userName) {
+        return market != null && market.hasUserNamed(userName);
     }
 
     @Override

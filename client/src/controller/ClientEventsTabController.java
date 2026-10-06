@@ -1,10 +1,14 @@
 package controller;
 
 import anim.AnimationManager;
+import com.google.gson.Gson;
 import engine.api.dto.EventDTO;
 import engine.api.dto.EventFilterDTO;
+import engine.api.dto.LmsrEventStateDTO;
+import engine.api.dto.OrderBookEventStateDTO;
 import engine.api.dto.SnapshotDTO;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -48,6 +52,22 @@ public class ClientEventsTabController {
 
     /** The most recent picture of the market, so a filter change needs no request. */
     private SnapshotDTO latest;
+
+    /**
+     * The table keeps one list for its whole life and the rows are replaced
+     * inside it. Handing it a brand new list every second would throw away the
+     * column the user had sorted by, once a second, for ever.
+     */
+    private final ObservableList<EventDTO> rows = FXCollections.observableArrayList();
+
+    /**
+     * What the details pane was last built from. The pane is a tree of tables
+     * and a chart, and rebuilding it every second would lose any sorting or
+     * scrolling inside it and, with animations on, keep it fading for ever. So
+     * it is only rebuilt when the thing it is showing has actually changed.
+     */
+    private String shownDetails;
+    private static final Gson FINGERPRINT = new Gson();
 
     @FXML
     private void initialize() {
@@ -105,6 +125,7 @@ public class ClientEventsTabController {
                 Tables.text("Market maker", EventDTO::getMarketMakerName)));
         eventsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         eventsTable.setPlaceholder(new Label(NOTHING_YET));
+        eventsTable.setItems(rows);
         eventsTable.getSelectionModel().selectedItemProperty()
                 .addListener((observable, old, selected) -> showDetails(selected));
     }
@@ -138,7 +159,7 @@ public class ClientEventsTabController {
                 matching.add(event);
             }
         }
-        eventsTable.setItems(FXCollections.observableArrayList(matching));
+        rows.setAll(matching);
         eventsTable.setPlaceholder(new Label(
                 latest.getTotalEventCount() == 0 ? NOTHING_YET : NO_MATCHES));
 
@@ -169,25 +190,41 @@ public class ClientEventsTabController {
         detailsHint.setManaged(hasEvent);
 
         if (!hasEvent || latest == null) {
-            detailsHolder.setContent(new Label(latest == null || latest.getTotalEventCount() == 0
+            String nothing = latest == null || latest.getTotalEventCount() == 0
                     ? NOTHING_YET
-                    : "Select an event to see its details."));
+                    : "Select an event to see its details.";
+            if (!nothing.equals(shownDetails)) {
+                shownDetails = nothing;
+                detailsHolder.setContent(new Label(nothing));
+            }
             return;
         }
 
         // The poll only carries the detail of the event that was selected when it
         // was sent, so just after a click there is nothing yet. Saying so beats
         // blanking the panel for a moment.
-        Node content;
+        Object state = null;
         if (latest.getOrderBookState() != null
                 && latest.getOrderBookState().getEvent().getId() == event.getId()) {
-            content = EventDetailView.buildOrderBook(latest.getOrderBookState());
+            state = latest.getOrderBookState();
         } else if (latest.getLmsrState() != null
                 && latest.getLmsrState().getEvent().getId() == event.getId()) {
-            content = EventDetailView.buildLmsr(latest.getLmsrState());
-        } else {
-            content = new Label("Loading '" + event.getName() + "'...");
+            state = latest.getLmsrState();
         }
+
+        String fingerprint = state == null
+                ? "loading:" + event.getId()
+                : FINGERPRINT.toJson(state);
+        if (fingerprint.equals(shownDetails)) {
+            return;
+        }
+        shownDetails = fingerprint;
+
+        Node content = state == null
+                ? new Label("Loading '" + event.getName() + "'...")
+                : state instanceof OrderBookEventStateDTO book
+                        ? EventDetailView.buildOrderBook(book)
+                        : EventDetailView.buildLmsr((LmsrEventStateDTO) state);
         detailsHolder.setContent(content);
         AnimationManager.fadeIn(content);
     }

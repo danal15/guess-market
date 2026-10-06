@@ -54,11 +54,18 @@ javac --module-path "%FX%" --add-modules javafx.controls,javafx.fxml -encoding U
 if errorlevel 1 exit /b 1
 xcopy /s /e /q /y "%ROOT%client\resources\*" "%ROOT%out3\client\" >nul
 
+echo Building engine.jar...
+(echo Manifest-Version: 1.0) > "%ROOT%out3\engine-manifest.txt"
+jar --create --file "%ROOT%out3\engine.jar" --manifest "%ROOT%out3\engine-manifest.txt" -C "%ROOT%out3\engine" .
+if errorlevel 1 exit /b 1
+
 echo Assembling the war...
+rem The engine travels as a jar in WEB-INF\lib beside gson, which is the shape
+rem the exercise asks for. Only the servlets are loose classes.
 mkdir "%ROOT%out3\war\WEB-INF\classes"
 mkdir "%ROOT%out3\war\WEB-INF\lib"
-xcopy /s /e /q /y "%ROOT%out3\engine\*" "%ROOT%out3\war\WEB-INF\classes\" >nul
 xcopy /s /e /q /y "%ROOT%out3\server\*" "%ROOT%out3\war\WEB-INF\classes\" >nul
+copy /y "%ROOT%out3\engine.jar" "%ROOT%out3\war\WEB-INF\lib\" >nul
 copy /y "%GSON%" "%ROOT%out3\war\WEB-INF\lib\" >nul
 copy /y "%ROOT%server\web\WEB-INF\web.xml" "%ROOT%out3\war\WEB-INF\" >nul
 (echo Manifest-Version: 1.0) > "%ROOT%out3\war-manifest.txt"
@@ -79,9 +86,7 @@ for %%f in ("%ROOT%lib\javafx\bin\*.dll") do echo %%~nxf | findstr /i /c:"jfxweb
 echo Building the client folder...
 if exist "%CLIENT_DIR%" rmdir /s /q "%CLIENT_DIR%"
 mkdir "%CLIENT_DIR%"
-(echo Manifest-Version: 1.0) > "%ROOT%out3\engine-manifest.txt"
-jar --create --file "%CLIENT_DIR%\engine.jar" --manifest "%ROOT%out3\engine-manifest.txt" -C "%ROOT%out3\engine" .
-if errorlevel 1 exit /b 1
+copy /y "%ROOT%out3\engine.jar" "%CLIENT_DIR%\engine.jar" >nul
 (
   echo Manifest-Version: 1.0
   echo Main-Class: app.ClientLauncher

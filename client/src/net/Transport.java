@@ -35,7 +35,17 @@ import java.util.Random;
  */
 public class Transport {
 
-    private static final Duration TIMEOUT = Duration.ofSeconds(20);
+    /**
+     * Short on purpose. The dialogs ask the server what something would cost
+     * while the user is still typing, and that happens on the interface thread,
+     * so a server that has stopped answering must give up quickly rather than
+     * hold the window still. Everything here talks to a machine that is almost
+     * always the same one, so a few seconds is already generous.
+     */
+    private static final Duration TIMEOUT = Duration.ofSeconds(5);
+
+    /** An upload carries a whole file, so it is given longer. */
+    private static final Duration UPLOAD_TIMEOUT = Duration.ofSeconds(30);
     private static final Gson GSON = new Gson();
 
     private final String baseUrl;
@@ -93,7 +103,7 @@ public class Transport {
         String boundary = "GuessMarket" + Long.toHexString(new Random().nextLong());
         byte[] body = multipart(boundary, fileName, content);
         HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + path))
-                .timeout(TIMEOUT)
+                .timeout(UPLOAD_TIMEOUT)
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                 .POST(HttpRequest.BodyPublishers.ofByteArray(body))
                 .build();
@@ -102,7 +112,8 @@ public class Transport {
 
     private byte[] multipart(String boundary, String fileName, byte[] content) {
         String head = "--" + boundary + "\r\n"
-                + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n"
+                + "Content-Disposition: form-data; name=\"file\"; filename=\""
+                + headerSafe(fileName) + "\"\r\n"
                 + "Content-Type: application/xml\r\n\r\n";
         String tail = "\r\n--" + boundary + "--\r\n";
         byte[] headBytes = head.getBytes(StandardCharsets.UTF_8);
@@ -112,6 +123,20 @@ public class Transport {
         System.arraycopy(content, 0, body, headBytes.length, content.length);
         System.arraycopy(tailBytes, 0, body, headBytes.length + content.length, tailBytes.length);
         return body;
+    }
+
+    /**
+     * A name fit to sit inside a header: quotes would end the field early, and
+     * anything outside plain ASCII arrives at the other end as mojibake. Only
+     * the name travels through here - the file itself is sent as bytes and is
+     * untouched by this.
+     */
+    private String headerSafe(String fileName) {
+        StringBuilder safe = new StringBuilder();
+        for (char c : fileName.toCharArray()) {
+            safe.append(c >= 32 && c < 127 && c != '"' && c != '\\' ? c : '_');
+        }
+        return safe.isEmpty() ? "upload.xml" : safe.toString();
     }
 
     private <T> T send(HttpRequest request, Class<T> type) {
@@ -169,6 +194,9 @@ public class Transport {
             case "InvalidMarketFileException" -> throw new InvalidMarketFileException(refusal.message);
             case "IllegalArgumentException" -> throw new IllegalArgumentException(refusal.message);
             case "IllegalStateException" -> throw new IllegalStateException(refusal.message);
+            // Not a refusal about the market - the server does not know us any
+            // more, which is a different thing from the server being unreachable.
+            case "NotLoggedIn" -> throw new NotLoggedInException(refusal.message);
             default -> throw new ServerRefusedException(refusal.message);
         }
     }

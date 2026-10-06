@@ -46,6 +46,9 @@ public interface GMEngine {
      */
     UserDTO login(String userName);
 
+    /** Whether anybody is logged in under this name. */
+    boolean knowsUser(String userName);
+
     /** Money the user puts into their own account. Lifts a block if there is one. */
     UserDTO loadFunds(String userName, double amount);
 

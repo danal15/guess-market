@@ -1,12 +1,14 @@
 package controller;
 
 import anim.AnimationManager;
+import com.google.gson.Gson;
 import engine.api.dto.EventDTO;
 import engine.api.dto.MovementDTO;
 import engine.api.dto.NewEventRequestDTO;
 import engine.api.dto.SnapshotDTO;
 import engine.api.dto.UserDTO;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -39,6 +41,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * This user's own screen: what their account holds, where it has been, and the
@@ -73,6 +76,19 @@ public class AccountTabController {
     private SnapshotDTO latest;
     private File lastDirectory;
 
+    // The tables keep their own lists for life and have rows replaced inside
+    // them, so a refresh never costs the user their sort order.
+    private final ObservableList<MovementDTO> movementRows = FXCollections.observableArrayList();
+    private final ObservableList<UserDTO> userRows = FXCollections.observableArrayList();
+    private final ObservableList<EventDTO> eventRows = FXCollections.observableArrayList();
+
+    /** What the detail pane below was last built from; see the events tab. */
+    private String shownDetails;
+    private static final Gson FINGERPRINT = new Gson();
+
+    /** True while an upload is running, so the refresh does not re-enable the buttons. */
+    private boolean busy;
+
     /** Remembered so acting on an event does not fold the panel away again. */
     private boolean fullDetailsExpanded;
     private boolean chartExpanded;
@@ -92,7 +108,13 @@ public class AccountTabController {
         detailsHolder.setContent(new Label("Select one of the events above to take part in it."));
 
         chartPane.setExpanded(false);
-        chartPane.expandedProperty().addListener((observable, old, expanded) -> chartExpanded = expanded);
+        chartPane.expandedProperty().addListener((observable, old, expanded) -> {
+            chartExpanded = expanded;
+            if (expanded && latest != null) {
+                chartPane.setContent(BalanceChartView.build(
+                        latest.getUser().getName(), latest.getBalanceHistory()));
+            }
+        });
     }
 
     public void start(MarketClient client, Runnable onChanged) {
@@ -112,6 +134,7 @@ public class AccountTabController {
                 Tables.money("Balance after", MovementDTO::getBalanceAfter)));
         movementsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         movementsTable.setPlaceholder(new Label("Nothing has moved in this account yet."));
+        movementsTable.setItems(movementRows);
     }
 
     private void buildUsersTable() {
@@ -121,6 +144,7 @@ public class AccountTabController {
                 Tables.yesNo("Market maker", UserDTO::isMarketMaker)));
         usersTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         usersTable.setPlaceholder(new Label("Nobody else is logged in."));
+        usersTable.setItems(userRows);
     }
 
     private void buildEventsTable() {
@@ -131,6 +155,7 @@ public class AccountTabController {
                 Tables.text("Your role", this::roleIn)));
         eventsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         eventsTable.setPlaceholder(new Label("No events yet. Upload a file to start some."));
+        eventsTable.setItems(eventRows);
         eventsTable.getSelectionModel().selectedItemProperty()
                 .addListener((observable, old, selected) -> showEvent(selected));
     }
@@ -162,7 +187,7 @@ public class AccountTabController {
         UserDTO me = snapshot.getUser();
 
         ownBalanceLabel.setText("Balance: " + Format.money(me.getBalance()));
-        movementsTable.setItems(FXCollections.observableArrayList(snapshot.getMovements()));
+        movementRows.setAll(snapshot.getMovements());
 
         List<UserDTO> others = new ArrayList<>();
         for (UserDTO user : snapshot.getUsers()) {
@@ -170,14 +195,16 @@ public class AccountTabController {
                 others.add(user);
             }
         }
-        usersTable.setItems(FXCollections.observableArrayList(others));
+        userRows.setAll(others);
 
         if (chartPane.isExpanded()) {
             chartPane.setContent(BalanceChartView.build(me.getName(), snapshot.getBalanceHistory()));
         }
-        chartPane.setExpanded(chartExpanded);
 
-        createEventButton.setDisable(me.isBlocked());
+        // An upload is in flight, so leave the buttons as the upload left them.
+        createEventButton.setDisable(busy || me.isBlocked());
+        loadFundsButton.setDisable(busy);
+        uploadButton.setDisable(busy);
         createEventButton.setTooltip(new Tooltip(me.isBlocked()
                 ? "This account is blocked and cannot create events."
                 : "Create a new event with you as its market maker."));
@@ -191,7 +218,7 @@ public class AccountTabController {
 
     private void showEvents() {
         EventDTO previous = eventsTable.getSelectionModel().getSelectedItem();
-        eventsTable.setItems(FXCollections.observableArrayList(latest.getEvents()));
+        eventRows.setAll(latest.getEvents());
         if (previous != null) {
             for (EventDTO candidate : latest.getEvents()) {
                 if (candidate.getId() == previous.getId()) {
@@ -205,34 +232,54 @@ public class AccountTabController {
     private void showEvent(EventDTO event) {
         actionBar.getChildren().clear();
         if (event == null || latest == null) {
-            detailsHolder.setContent(new Label("Select one of the events above to take part in it."));
+            show("none", () -> new Label("Select one of the events above to take part in it."));
             return;
         }
+        // The actions depend on the user's balance and the event's status, both
+        // of which move, so they are cheap and always rebuilt.
+        buildActions(latest.getUser(), event);
+
         if (latest.getInvolvement() == null
                 || latest.getInvolvement().getEventId() != event.getId()) {
-            detailsHolder.setContent(new Label("Loading '" + event.getName() + "'..."));
-            buildActions(latest.getUser(), event);
+            show("loading:" + event.getId(),
+                    () -> new Label("Loading '" + event.getName() + "'..."));
             return;
         }
 
-        VBox content = new VBox(10);
-        content.getChildren().add(UserInvolvementView.build(latest.getInvolvement()));
+        Object full = latest.getOrderBookState() != null
+                ? latest.getOrderBookState()
+                : latest.getLmsrState();
+        String fingerprint = FINGERPRINT.toJson(latest.getInvolvement())
+                + (full == null ? "" : FINGERPRINT.toJson(full));
 
-        Node full = latest.getOrderBookState() != null
-                ? EventDetailView.buildOrderBook(latest.getOrderBookState())
-                : latest.getLmsrState() != null
-                        ? EventDetailView.buildLmsr(latest.getLmsrState())
-                        : new Label("");
-        TitledPane fullPane = new TitledPane("Full event details", full);
-        fullPane.setExpanded(fullDetailsExpanded);
-        fullPane.setAnimated(false);
-        fullPane.expandedProperty()
-                .addListener((observable, old, expanded) -> fullDetailsExpanded = expanded);
-        content.getChildren().add(fullPane);
+        show(fingerprint, () -> {
+            VBox content = new VBox(10);
+            content.getChildren().add(UserInvolvementView.build(latest.getInvolvement()));
 
+            Node detail = latest.getOrderBookState() != null
+                    ? EventDetailView.buildOrderBook(latest.getOrderBookState())
+                    : latest.getLmsrState() != null
+                            ? EventDetailView.buildLmsr(latest.getLmsrState())
+                            : new Label("");
+            TitledPane fullPane = new TitledPane("Full event details", detail);
+            fullPane.setExpanded(fullDetailsExpanded);
+            fullPane.setAnimated(false);
+            fullPane.expandedProperty()
+                    .addListener((observable, old, expanded) -> fullDetailsExpanded = expanded);
+            content.getChildren().add(fullPane);
+            return content;
+        });
+    }
+
+    /** Replaces the detail pane only when what it is showing has changed. */
+    private void show(String fingerprint, Supplier<Node> build) {
+        if (fingerprint.equals(shownDetails)) {
+            return;
+        }
+        shownDetails = fingerprint;
+        Node content = build.get();
         detailsHolder.setContent(content);
         AnimationManager.slideIn(content);
-        buildActions(latest.getUser(), event);
     }
 
     /**
@@ -465,10 +512,11 @@ public class AccountTabController {
         setBusy(false);
     }
 
-    private void setBusy(boolean busy) {
-        uploadButton.setDisable(busy);
-        createEventButton.setDisable(busy);
-        loadFundsButton.setDisable(busy);
+    private void setBusy(boolean working) {
+        this.busy = working;
+        uploadButton.setDisable(working);
+        createEventButton.setDisable(working);
+        loadFundsButton.setDisable(working);
     }
 
     private Window windowOf(Button button) {

@@ -1,8 +1,11 @@
 # Build output
 /out/
+/out3/
 /build/
+/ex3-client/
 *.class
 *.jar
+*.war
 
 # Saved game state files (bonus feature output)
 *.gmstate

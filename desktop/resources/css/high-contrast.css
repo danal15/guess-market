@@ -118,6 +118,20 @@
 .default-color0.chart-legend-item-symbol, .default-color0.chart-line-symbol { -fx-background-color: -accent; }
 .default-color1.chart-legend-item-symbol, .default-color1.chart-line-symbol { -fx-background-color: #00d5ff; }
 
+/* lists - the chat is the only one, and it follows the tables */
+.list-view {
+    -fx-background-color: -surface; -fx-border-color: -line;
+    -fx-background-radius: 12; -fx-border-radius: 12;
+    -fx-background-insets: 0; -fx-padding: 4;
+}
+.list-cell {
+    -fx-background-color: transparent; -fx-text-fill: -ink;
+    -fx-padding: 3 8 3 8;
+}
+.list-cell:odd { -fx-background-color: -raised; }
+.list-cell:selected { -fx-background-color: -accent; -fx-text-fill: -accent-ink; }
+.list-view .placeholder .label { -fx-text-fill: -ink-muted; }
+
 /* dialogs */
 .dialog-pane { -fx-background-color: -page; -fx-border-color: -accent; -fx-border-width: 2; -fx-background-radius: 14; -fx-border-radius: 14; }
 .dialog-pane .dialog-header {

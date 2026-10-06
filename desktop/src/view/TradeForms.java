@@ -317,7 +317,7 @@ public final class TradeForms {
         }
         runner.accept(() -> {
             CloseResultDTO result = engine.closeEvent(event.getId(), userName, index);
-            Dialogs.info("Event closed", controller.UsersTabController.describeClose(result));
+            Dialogs.info("Event closed", util.CloseSummary.describe(result));
         });
     }
 

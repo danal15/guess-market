@@ -46,7 +46,7 @@ public class OrderBookEvent extends Event {
         long pairs = initialPairs();
         double cost = pairs * (double) d;
         if (cost > 0) {
-            marketMaker.pay(cost);
+            marketMaker.pay(cost, "Initial stock bought to open the event", getName());
             getAccount().deposit(cost);
         }
         if (pairs > 0) {
@@ -83,7 +83,7 @@ public class OrderBookEvent extends Event {
             double gross = winningShares * (double) d;
             double fee = getCommissionType() == CommissionType.ON_CLOSE ? commissionOn(gross) : 0.0;
             getAccount().withdraw(gross);
-            user.receive(gross - fee);
+            user.receive(gross - fee, "Winnings", getName());
             holding.recordPayout(winningIndex, gross);
             holding.addCommission(fee);
             creditCommission(marketMaker, fee);
@@ -93,7 +93,7 @@ public class OrderBookEvent extends Event {
         double remainder = getAccount().getBalance();
         if (remainder != 0) {
             getAccount().withdraw(remainder);
-            marketMaker.receive(remainder);
+            marketMaker.receive(remainder, "Event account balance, returned", getName());
             marketMaker.holdingFor(getId()).recordMarketMakerReceived(remainder);
             summary.recordReturnedToMarketMaker(remainder);
         }

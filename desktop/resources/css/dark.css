@@ -138,6 +138,20 @@
 .table-view .placeholder .label { -fx-text-fill: -ink-muted; }
 .numeric-cell { -fx-alignment: CENTER-RIGHT; }
 
+/* lists - the chat is the only one, and it follows the tables */
+.list-view {
+    -fx-background-color: -surface; -fx-border-color: -line;
+    -fx-background-radius: 12; -fx-border-radius: 12;
+    -fx-background-insets: 0; -fx-padding: 4;
+}
+.list-cell {
+    -fx-background-color: transparent; -fx-text-fill: -ink;
+    -fx-padding: 3 8 3 8;
+}
+.list-cell:odd { -fx-background-color: #1b2135; }
+.list-cell:selected { -fx-background-color: linear-gradient(to right, #6f5cff, #7c6bff); -fx-text-fill: -accent-ink; }
+.list-view .placeholder .label { -fx-text-fill: -ink-muted; }
+
 /* containers */
 .scroll-pane, .scroll-pane > .viewport { -fx-background-color: -surface; -fx-background-radius: 12; }
 .scroll-bar { -fx-background-color: transparent; }

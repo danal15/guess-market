@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="controller.ClientRootController">
+
+    <top>
+        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="header">
+            <padding>
+                <Insets top="8" right="12" bottom="8" left="12"/>
+            </padding>
+
+            <Label text="Guess Market" styleClass="app-title"/>
+            <Separator orientation="VERTICAL"/>
+            <Label fx:id="userLabel" styleClass="balance-label"/>
+            <Label fx:id="balanceLabel" styleClass="balance-label"/>
+            <Label fx:id="blockedLabel" styleClass="blocked-label"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Label fx:id="statusLabel" styleClass="hint-label"/>
+            <Separator orientation="VERTICAL"/>
+            <Label text="Skin"/>
+            <ChoiceBox fx:id="skinChoice"/>
+            <CheckBox fx:id="animationsCheck" text="Animations"/>
+        </HBox>
+    </top>
+
+    <center>
+        <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE">
+            <tabs>
+                <Tab text="Events">
+                    <fx:include fx:id="eventsPane" source="client-events-tab.fxml"/>
+                </Tab>
+                <Tab text="Account">
+                    <fx:include fx:id="accountPane" source="account-tab.fxml"/>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </center>
+
+    <bottom>
+        <!-- Folded away to begin with, so the chat is there without taking room
+             from the market until somebody wants it. -->
+        <TitledPane fx:id="chatPane" text="Chat" expanded="false" animated="false">
+            <VBox>
+                <fx:include fx:id="chatBox" source="chat.fxml"/>
+            </VBox>
+        </TitledPane>
+    </bottom>
+
+</BorderPane>

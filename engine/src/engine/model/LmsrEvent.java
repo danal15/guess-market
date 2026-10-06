@@ -40,7 +40,7 @@ public class LmsrEvent extends Event {
     @Override
     protected void fundOpening(User marketMaker) {
         double subsidy = requiredOpeningFunds();
-        marketMaker.pay(subsidy);
+        marketMaker.pay(subsidy, "Subsidy paid to open the event", getName());
         getAccount().deposit(subsidy);
         Holding holding = marketMaker.holdingFor(getId());
         holding.markOrdered();
@@ -137,7 +137,8 @@ public class LmsrEvent extends Event {
                     buyer.getName(), totalPaid, buyer.getAccount().getBalance()));
         }
 
-        buyer.pay(totalPaid);
+        buyer.pay(totalPaid, "Bought " + quantity + " of '"
+                + getOption(optionIndex).getName() + "'", getName());
         getAccount().deposit(sharesCost);
         creditCommission(marketMaker, commission);
         getOption(optionIndex).addShares(quantity);
@@ -168,7 +169,7 @@ public class LmsrEvent extends Event {
             double gross = winningShares * PAYOUT_PER_SHARE;
             double fee = getCommissionType() == CommissionType.ON_CLOSE ? commissionOn(gross) : 0.0;
             getAccount().withdraw(gross);
-            user.receive(gross - fee);
+            user.receive(gross - fee, "Winnings", getName());
             holding.recordPayout(winningIndex, gross);
             holding.addCommission(fee);
             creditCommission(marketMaker, fee);
@@ -178,7 +179,7 @@ public class LmsrEvent extends Event {
         double remainder = getAccount().getBalance();
         if (remainder > 0) {
             getAccount().withdraw(remainder);
-            marketMaker.receive(remainder);
+            marketMaker.receive(remainder, "Subsidy left over, returned", getName());
             marketMaker.holdingFor(getId()).recordMarketMakerReceived(remainder);
             summary.recordReturnedToMarketMaker(remainder);
         }

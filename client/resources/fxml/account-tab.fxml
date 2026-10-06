@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.AccountTabController" spacing="6" styleClass="pane-box">
+    <padding>
+        <Insets top="8" right="8" bottom="8" left="8"/>
+    </padding>
+
+    <!-- Uploading events is an account action: whoever uploads a file becomes
+         the market maker of everything in it. -->
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Button fx:id="uploadButton" text="Upload Events File..." onAction="#onUpload"/>
+        <TextField fx:id="filePathField" editable="false" promptText="No file uploaded yet">
+            <HBox.hgrow>
+                <Priority fx:constant="ALWAYS"/>
+            </HBox.hgrow>
+        </TextField>
+        <ProgressBar fx:id="progressBar" prefWidth="120"/>
+        <Label fx:id="progressLabel" styleClass="hint-label"/>
+    </HBox>
+
+    <SplitPane dividerPositions="0.34">
+        <VBox.vgrow>
+            <Priority fx:constant="ALWAYS"/>
+        </VBox.vgrow>
+        <items>
+
+            <VBox spacing="6" minWidth="240">
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label text="Your account" styleClass="section-title"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="loadFundsButton" text="Load funds..." onAction="#onLoadFunds"/>
+                </HBox>
+                <Label fx:id="ownBalanceLabel" styleClass="balance-label" text="Balance: -"/>
+
+                <Label text="Every movement of money" styleClass="hint-label"/>
+                <TableView fx:id="movementsTable" minHeight="90">
+                    <VBox.vgrow>
+                        <Priority fx:constant="ALWAYS"/>
+                    </VBox.vgrow>
+                </TableView>
+
+                <TitledPane fx:id="chartPane" text="Balance over time" expanded="false"
+                            animated="false"/>
+
+                <Label text="Other users" styleClass="section-title"/>
+                <TableView fx:id="usersTable" minHeight="80" prefHeight="150"/>
+            </VBox>
+
+            <VBox spacing="6" minWidth="320">
+                <SplitPane orientation="VERTICAL" dividerPositions="0.42">
+                    <VBox.vgrow>
+                        <Priority fx:constant="ALWAYS"/>
+                    </VBox.vgrow>
+                    <items>
+
+                        <VBox spacing="6" minHeight="150">
+                            <HBox spacing="8" alignment="CENTER_LEFT">
+                                <Label text="All events - pick one to take part in it"
+                                       styleClass="section-title"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Button fx:id="createEventButton" text="Create new event..."
+                                        onAction="#onCreateEvent"/>
+                            </HBox>
+                            <TableView fx:id="eventsTable" minHeight="90">
+                                <VBox.vgrow>
+                                    <Priority fx:constant="ALWAYS"/>
+                                </VBox.vgrow>
+                            </TableView>
+                            <HBox fx:id="actionBar" spacing="8" alignment="CENTER_LEFT" minHeight="32"/>
+                        </VBox>
+
+                        <VBox spacing="6" minHeight="150">
+                            <Label text="Event details and trade" styleClass="section-title"/>
+                            <ScrollPane fx:id="detailsHolder" fitToWidth="true" prefHeight="200">
+                                <VBox.vgrow>
+                                    <Priority fx:constant="ALWAYS"/>
+                                </VBox.vgrow>
+                            </ScrollPane>
+                        </VBox>
+
+                    </items>
+                </SplitPane>
+            </VBox>
+
+        </items>
+    </SplitPane>
+</VBox>

@@ -133,10 +133,11 @@ public class OrderMatcher {
         Holding buyerHolding = buyer.holdingFor(event.getId());
         Holding sellerHolding = seller.holdingFor(event.getId());
 
-        seller.receive(amount);
+        String optionName = event.getOption(optionIndex).getName();
+        seller.receive(amount, "Sold " + quantity + " of '" + optionName + "'", event.getName());
         sellerHolding.removeShares(optionIndex, quantity, amount);
 
-        buyer.pay(amount);
+        buyer.pay(amount, "Bought " + quantity + " of '" + optionName + "'", event.getName());
         buyerHolding.addShares(optionIndex, quantity, amount);
         double fee = event.applyPurchaseCommission(buyer, marketMaker, buyerHolding, amount);
 
@@ -187,8 +188,10 @@ public class OrderMatcher {
         Holding incomingHolding = trader.holdingFor(event.getId());
         Holding restingHolding = restingUser.holdingFor(event.getId());
 
-        trader.pay(incomingAmount);
-        restingUser.pay(restingAmount);
+        trader.pay(incomingAmount, "Minted " + quantity + " of '"
+                + event.getOption(incoming.getOptionIndex()).getName() + "'", event.getName());
+        restingUser.pay(restingAmount, "Minted " + quantity + " of '"
+                + event.getOption(resting.getOptionIndex()).getName() + "'", event.getName());
         event.getAccount().deposit(incomingAmount + restingAmount);
 
         event.creditMintedPair(quantity);

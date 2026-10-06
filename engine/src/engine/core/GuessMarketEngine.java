@@ -2,11 +2,13 @@ package engine.core;
 
 import engine.api.GMEngine;
 import engine.api.dto.BuyResultDTO;
+import engine.api.dto.ChatMessageDTO;
 import engine.api.dto.CloseResultDTO;
 import engine.api.dto.EventDTO;
 import engine.api.dto.EventFilterDTO;
 import engine.api.dto.FillDTO;
 import engine.api.dto.LmsrEventStateDTO;
+import engine.api.dto.MovementDTO;
 import engine.api.dto.NewEventRequestDTO;
 import engine.api.dto.OptionStateDTO;
 import engine.api.dto.OrderBookEventStateDTO;
@@ -18,6 +20,7 @@ import engine.api.dto.OrderResultDTO;
 import engine.api.dto.ParticipantDTO;
 import engine.api.dto.PricePointDTO;
 import engine.api.dto.PurchaseQuoteDTO;
+import engine.api.dto.SnapshotDTO;
 import engine.api.dto.TradeDTO;
 import engine.api.dto.UserDTO;
 import engine.api.dto.UserEventInvolvementDTO;
@@ -27,11 +30,13 @@ import engine.core.ob.OrderMatcher;
 import engine.core.ob.OrderOutcome;
 import engine.core.xml.MarketFileLoader;
 import engine.model.CloseSummary;
+import engine.model.ChatMessage;
 import engine.model.CommissionType;
 import engine.model.Event;
 import engine.model.ExecutedTrade;
 import engine.model.Holding;
 import engine.model.LmsrEvent;
+import engine.model.Movement;
 import engine.model.Order;
 import engine.model.OrderBook;
 import engine.model.OrderBookEvent;
@@ -39,28 +44,205 @@ import engine.model.OrderSide;
 import engine.model.Trade;
 import engine.model.User;
 
+import java.io.InputStream;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * The one implementation of the engine. It is passive: it answers whoever calls
+ * it and knows nothing about them, which is what lets the same engine sit
+ * behind a desktop window in exercise 2 and behind a web server in exercise 3.
+ *
+ * Every public method is synchronised. On a server several requests arrive at
+ * once, and almost every action here is a transaction over several objects at
+ * once - take the money, move the shares, bump the counters, append the trade.
+ * Guarding each field on its own would be more code and still be wrong, so the
+ * whole api is the critical section. Nothing below this class needs to know.
+ */
 public class GuessMarketEngine implements GMEngine {
 
     private static final String STATE_FILE_EXTENSION = ".gmstate";
 
+    /** What a user has in their account the moment they log in. */
+    private static final double STARTING_BALANCE = 0.0;
+
     private Market market;
     private String loadedFilePath;
+
+    /** Starts with nothing loaded, the way the desktop application begins. */
+    public GuessMarketEngine() {
+    }
+
+    /**
+     * Starts with an empty market that is open for business straight away. The
+     * server needs this: users log in and upload files into a market that has
+     * to exist before the first of them arrives.
+     */
+    public static GuessMarketEngine startedEmpty() {
+        GuessMarketEngine engine = new GuessMarketEngine();
+        engine.market = new Market(List.of(), List.of());
+        return engine;
+    }
 
     // ---------- loading ----------
 
     @Override
-    public void loadMarketFile(String path) {
+    public synchronized void loadMarketFile(String path) {
         Market loaded = MarketFileLoader.load(path);
         this.market = loaded;
         this.loadedFilePath = path;
     }
 
+    /**
+     * Exercise 3 files add to the market instead of replacing it, so several
+     * people can each contribute events to one running market.
+     */
     @Override
-    public void saveState(String pathWithoutExtension) {
+    public synchronized List<String> uploadMarketFile(InputStream xml, String uploaderName) {
+        requireLoaded();
+        User uploader = market.requireUser(uploaderName);
+        List<Event> added = MarketFileLoader.loadInto(market, xml, uploader.getName());
+        List<String> names = new ArrayList<>();
+        for (Event event : added) {
+            uploader.addMarketMakerEvent(event.getId());
+            names.add(event.getName());
+        }
+        return names;
+    }
+
+    // ---------- users arriving and funding themselves ----------
+
+    @Override
+    public synchronized UserDTO login(String userName) {
+        requireLoaded();
+        String name = userName == null ? "" : userName.trim();
+        if (name.isEmpty()) {
+            throw new TradingException("Enter a user name to log in with.");
+        }
+        if (market.hasUserNamed(name)) {
+            throw new TradingException("The name '" + name
+                    + "' is already taken. Pick another one and log in again.");
+        }
+        User user = new User(name, STARTING_BALANCE);
+        market.addUser(user);
+        return toUserDTO(user);
+    }
+
+    @Override
+    public synchronized UserDTO loadFunds(String userName, double amount) {
+        requireLoaded();
+        User user = market.requireUser(userName);
+        if (!(amount > 0)) {
+            throw new TradingException("The amount to load must be greater than zero.");
+        }
+        if (Double.isInfinite(amount) || Double.isNaN(amount)) {
+            throw new TradingException("That is not an amount of money.");
+        }
+        user.loadFunds(amount);
+        return toUserDTO(user);
+    }
+
+    @Override
+    public synchronized List<MovementDTO> getAccountMovements(String userName) {
+        requireLoaded();
+        List<MovementDTO> lines = new ArrayList<>();
+        int index = 1;
+        for (Movement movement : market.requireUser(userName).getMovements()) {
+            lines.add(new MovementDTO(index++, movement.getReason(), movement.getEventName(),
+                    movement.getAmount(), movement.getBalanceAfter()));
+        }
+        return lines;
+    }
+
+    @Override
+    public synchronized List<Integer> getParticipatingEventIds(String userName) {
+        requireLoaded();
+        return new ArrayList<>(market.requireUser(userName).getParticipatingEventIds());
+    }
+
+    // ---------- the whole of one screen, in one consistent pass ----------
+
+    @Override
+    public synchronized SnapshotDTO getSnapshot(String userName, Integer selectedEventId, int chatFrom) {
+        requireLoaded();
+        User user = market.requireUser(userName);
+
+        LmsrEventStateDTO lmsrState = null;
+        OrderBookEventStateDTO orderBookState = null;
+        UserEventInvolvementDTO involvement = null;
+        // A selection can name an event that has since been replaced by a fresh
+        // file, so a stale id is answered with nothing rather than an error.
+        if (selectedEventId != null) {
+            Event selected = market.findById(selectedEventId).orElse(null);
+            if (selected != null) {
+                if (selected instanceof OrderBookEvent book) {
+                    orderBookState = toOrderBookState(book);
+                } else {
+                    lmsrState = toLmsrState((LmsrEvent) selected);
+                }
+                involvement = getUserInvolvement(user.getName(), selected.getId());
+            }
+        }
+
+        return new SnapshotDTO(
+                toUserDTO(user),
+                getUsers(),
+                getEvents(EventFilterDTO.all()),
+                market.getEvents().size(),
+                getAccountMovements(user.getName()),
+                getUserBalanceHistory(user.getName()),
+                getParticipatingEventIds(user.getName()),
+                lmsrState, orderBookState, involvement,
+                chatSince(chatFrom), market.getChat().size());
+    }
+
+    // ---------- chat ----------
+
+    private static final DateTimeFormatter CHAT_CLOCK = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+    /** Longer than this and one person could push everybody else off the screen. */
+    private static final int CHAT_MESSAGE_LIMIT = 500;
+
+    @Override
+    public synchronized ChatMessageDTO postChatMessage(String userName, String text) {
+        requireLoaded();
+        User user = market.requireUser(userName);
+        user.requireActive();
+        String said = text == null ? "" : text.trim();
+        if (said.isEmpty()) {
+            throw new TradingException("There is nothing to send.");
+        }
+        if (said.length() > CHAT_MESSAGE_LIMIT) {
+            throw new TradingException("That message is too long - keep it under "
+                    + CHAT_MESSAGE_LIMIT + " characters.");
+        }
+        ChatMessage message = new ChatMessage(user.getName(), said, System.currentTimeMillis());
+        market.addChatMessage(message);
+        return toChatDTO(message);
+    }
+
+    /** Only what the caller has not seen, so a long conversation costs nothing to follow. */
+    private List<ChatMessageDTO> chatSince(int from) {
+        List<ChatMessage> all = market.getChat();
+        List<ChatMessageDTO> fresh = new ArrayList<>();
+        for (int i = Math.max(0, Math.min(from, all.size())); i < all.size(); i++) {
+            fresh.add(toChatDTO(all.get(i)));
+        }
+        return fresh;
+    }
+
+    private ChatMessageDTO toChatDTO(ChatMessage message) {
+        String time = Instant.ofEpochMilli(message.getTimestamp())
+                .atZone(ZoneId.systemDefault()).format(CHAT_CLOCK);
+        return new ChatMessageDTO(message.getUserName(), message.getText(), time);
+    }
+
+    @Override
+    public synchronized void saveState(String pathWithoutExtension) {
         requireLoaded();
         java.io.File target = new java.io.File(requirePath(pathWithoutExtension) + STATE_FILE_EXTENSION);
         java.io.File folder = target.getAbsoluteFile().getParentFile();
@@ -76,7 +258,7 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     @Override
-    public void loadState(String pathWithoutExtension) {
+    public synchronized void loadState(String pathWithoutExtension) {
         java.io.File source = new java.io.File(requirePath(pathWithoutExtension) + STATE_FILE_EXTENSION);
         if (!source.exists() || !source.isFile()) {
             throw new StatePersistenceException("No saved market exists at: " + source);
@@ -106,59 +288,45 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     @Override
-    public boolean isLoaded() {
+    public synchronized boolean isLoaded() {
         return market != null;
     }
 
     @Override
-    public String getLoadedFilePath() {
+    public synchronized String getLoadedFilePath() {
         return loadedFilePath;
     }
 
     // ---------- events ----------
 
     @Override
-    public List<EventDTO> getEvents(EventFilterDTO filter) {
+    public synchronized List<EventDTO> getEvents(EventFilterDTO filter) {
         requireLoaded();
         List<EventDTO> result = new ArrayList<>();
+        EventFilterDTO applied = filter == null ? EventFilterDTO.all() : filter;
         for (Event event : market.getEvents()) {
-            if (matches(event, filter)) {
-                result.add(toEventDTO(event));
+            EventDTO candidate = toEventDTO(event);
+            if (applied.matches(candidate)) {
+                result.add(candidate);
             }
         }
         return result;
     }
 
-    private boolean matches(Event event, EventFilterDTO filter) {
-        if (filter == null) {
-            return true;
-        }
-        if (filter.getOrderBook() != null
-                && filter.getOrderBook() != (event instanceof OrderBookEvent)) {
-            return false;
-        }
-        if (filter.getStatusLabel() != null
-                && !filter.getStatusLabel().equals(event.getStatus().getLabel())) {
-            return false;
-        }
-        return filter.getCommissionTypeLabel() == null
-                || filter.getCommissionTypeLabel().equals(event.getCommissionType().getLabel());
-    }
-
     @Override
-    public EventDTO getEvent(int eventId) {
+    public synchronized EventDTO getEvent(int eventId) {
         requireLoaded();
         return toEventDTO(market.requireEvent(eventId));
     }
 
     @Override
-    public LmsrEventStateDTO getLmsrEventState(int eventId) {
+    public synchronized LmsrEventStateDTO getLmsrEventState(int eventId) {
         requireLoaded();
         return toLmsrState(requireLmsr(market.requireEvent(eventId)));
     }
 
     @Override
-    public OrderBookEventStateDTO getOrderBookEventState(int eventId) {
+    public synchronized OrderBookEventStateDTO getOrderBookEventState(int eventId) {
         requireLoaded();
         return toOrderBookState(requireOrderBook(market.requireEvent(eventId)));
     }
@@ -166,7 +334,7 @@ public class GuessMarketEngine implements GMEngine {
     // ---------- users ----------
 
     @Override
-    public List<UserDTO> getUsers() {
+    public synchronized List<UserDTO> getUsers() {
         requireLoaded();
         List<UserDTO> result = new ArrayList<>();
         for (User user : market.getUsers()) {
@@ -176,13 +344,13 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     @Override
-    public UserDTO getUser(String userName) {
+    public synchronized UserDTO getUser(String userName) {
         requireLoaded();
         return toUserDTO(market.requireUser(userName));
     }
 
     @Override
-    public List<EventDTO> getUserEvents(String userName) {
+    public synchronized List<EventDTO> getUserEvents(String userName) {
         requireLoaded();
         // Every event, not only the ones already joined: a user has to be able
         // to reach an event in order to take part in it for the first time.
@@ -191,13 +359,13 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     @Override
-    public boolean isParticipant(String userName, int eventId) {
+    public synchronized boolean isParticipant(String userName, int eventId) {
         requireLoaded();
         return market.requireUser(userName).participatesIn(eventId);
     }
 
     @Override
-    public UserEventInvolvementDTO getUserInvolvement(String userName, int eventId) {
+    public synchronized UserEventInvolvementDTO getUserInvolvement(String userName, int eventId) {
         requireLoaded();
         User user = market.requireUser(userName);
         Event event = market.requireEvent(eventId);
@@ -257,22 +425,24 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     @Override
-    public List<Double> getUserBalanceHistory(String userName) {
+    public synchronized List<Double> getUserBalanceHistory(String userName) {
         requireLoaded();
-        return market.requireUser(userName).getBalanceHistory();
+        // A copy, not the market's own list: the caller reads it after the lock
+        // has gone, and by then another request may be appending to it.
+        return new ArrayList<>(market.requireUser(userName).getBalanceHistory());
     }
 
     // ---------- lifecycle ----------
 
     @Override
-    public void openEvent(int eventId, String actingUserName) {
+    public synchronized void openEvent(int eventId, String actingUserName) {
         requireLoaded();
         Event event = market.requireEvent(eventId);
         event.open(market.requireUser(actingUserName));
     }
 
     @Override
-    public CloseResultDTO closeEvent(int eventId, String actingUserName, int winningOptionIndex) {
+    public synchronized CloseResultDTO closeEvent(int eventId, String actingUserName, int winningOptionIndex) {
         requireLoaded();
         Event event = market.requireEvent(eventId);
         CloseSummary summary = event.close(
@@ -285,7 +455,7 @@ public class GuessMarketEngine implements GMEngine {
     // ---------- trading ----------
 
     @Override
-    public PurchaseQuoteDTO quoteLmsrPurchase(int eventId, String userName, int optionIndex, long quantity) {
+    public synchronized PurchaseQuoteDTO quoteLmsrPurchase(int eventId, String userName, int optionIndex, long quantity) {
         requireLoaded();
         LmsrEvent event = requireLmsr(market.requireEvent(eventId));
         User buyer = market.requireUser(userName);
@@ -298,7 +468,7 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     @Override
-    public BuyResultDTO buyLmsrShares(int eventId, String userName, int optionIndex, long quantity) {
+    public synchronized BuyResultDTO buyLmsrShares(int eventId, String userName, int optionIndex, long quantity) {
         requireLoaded();
         LmsrEvent event = requireLmsr(market.requireEvent(eventId));
         User buyer = market.requireUser(userName);
@@ -310,7 +480,7 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     @Override
-    public OrderQuoteDTO quoteOrder(int eventId, String userName, int optionIndex,
+    public synchronized OrderQuoteDTO quoteOrder(int eventId, String userName, int optionIndex,
                                     OrderSide side, double price, long quantity) {
         requireLoaded();
         OrderBookEvent event = requireOrderBook(market.requireEvent(eventId));
@@ -407,7 +577,7 @@ public class GuessMarketEngine implements GMEngine {
     }
 
     @Override
-    public OrderResultDTO placeOrder(int eventId, String userName, int optionIndex,
+    public synchronized OrderResultDTO placeOrder(int eventId, String userName, int optionIndex,
                                      OrderSide side, double price, long quantity) {
         requireLoaded();
         OrderBookEvent event = requireOrderBook(market.requireEvent(eventId));
@@ -431,7 +601,7 @@ public class GuessMarketEngine implements GMEngine {
     // ---------- creating an event (bonus) ----------
 
     @Override
-    public EventDTO createEvent(NewEventRequestDTO request, String creatorUserName) {
+    public synchronized EventDTO createEvent(NewEventRequestDTO request, String creatorUserName) {
         requireLoaded();
         User creator = market.requireUser(creatorUserName);
         creator.requireActive();

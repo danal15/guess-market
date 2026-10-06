@@ -17,7 +17,9 @@ import org.xml.sax.SAXParseException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -25,9 +27,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Reads an exercise 2 market file and turns it into a validated Market.
- * Every structural and application level check lives here, so the rest of the
- * engine can trust whatever comes out.
+ * Reads a market file and turns it into validated events. Every structural and
+ * application level check lives here, so the rest of the engine can trust
+ * whatever comes out.
+ *
+ * Two formats are read. The exercise 2 file carries its own users and gives
+ * every event an id and a market maker, and {@link #load(String)} builds a
+ * whole Market from one. The exercise 3 file carries events only, so
+ * {@link #loadInto} adds them to a Market that already exists and makes the
+ * uploading user their market maker. The event parsing itself is shared.
  */
 public final class MarketFileLoader {
 
@@ -84,6 +92,69 @@ public final class MarketFileLoader {
         return new Market(events, users);
     }
 
+    /**
+     * Reads an exercise 3 file and adds its events to a market that is already
+     * running. The file names no users and no market maker, so the user who
+     * uploaded it becomes the market maker of every event in it.
+     *
+     * Nothing is added until the whole file has been checked. A file with one
+     * bad event changes nothing at all, which matters here in a way it did not
+     * in exercise 2: other people are reading this market at the same time, and
+     * half a file is worse than none of it.
+     *
+     * @return the events that were added
+     */
+    public static List<Event> loadInto(Market market, InputStream xml, String uploaderName) {
+        Document document = parse(xml);
+
+        Element root = document.getDocumentElement();
+        if (root == null || !"Guess-Market".equals(root.getTagName())) {
+            throw new InvalidMarketFileException("The root element must be <Guess-Market>.");
+        }
+        Element eventsElement = firstChildElement(root, "GM-events");
+        if (eventsElement == null) {
+            throw new InvalidMarketFileException("Missing required <GM-events> element.");
+        }
+        if (firstChildElement(root, "GM-users") != null) {
+            throw new InvalidMarketFileException("This looks like an exercise 2 file, because it has a"
+                    + " <GM-users> section. Exercise 3 files describe events only, and whoever uploads"
+                    + " them becomes their market maker.");
+        }
+        List<Element> eventElements = childElements(eventsElement, "GM-event");
+        if (eventElements.isEmpty()) {
+            throw new InvalidMarketFileException("The file contains no <GM-event> elements.");
+        }
+
+        List<ParsedEvent> parsedEvents = new ArrayList<>();
+        Map<String, String> namesInThisFile = new LinkedHashMap<>();
+        for (Element element : eventElements) {
+            ParsedEvent parsed = parseEvent(element, false);
+            String key = parsed.name.toLowerCase();
+            String twin = namesInThisFile.get(key);
+            if (twin != null) {
+                throw new InvalidMarketFileException("This file describes two events named '" + twin
+                        + "'. The name is what identifies an event, so no two may share one.");
+            }
+            if (market.hasEventNamed(parsed.name)) {
+                throw new InvalidMarketFileException("An event named '" + parsed.name
+                        + "' is already in the system, so nothing from this file was loaded."
+                        + " Event names have to be unique across every file uploaded.");
+            }
+            namesInThisFile.put(key, parsed.name);
+            parsedEvents.add(parsed);
+        }
+
+        // Every check has passed, so from here nothing can fail half way through.
+        List<Event> added = new ArrayList<>();
+        for (ParsedEvent parsed : parsedEvents) {
+            parsed.id = market.nextEventId();
+            Event event = parsed.build(uploaderName);
+            market.addEvent(event);
+            added.add(event);
+        }
+        return added;
+    }
+
     // ---------- file handling ----------
 
     private static File resolveFile(String rawPath) {
@@ -103,30 +174,43 @@ public final class MarketFileLoader {
 
     private static Document parse(File file) {
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setIgnoringElementContentWhitespace(true);
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            // Without this the parser prints its own report to the console before
-            // failing, which the caller has no way to show or suppress.
-            builder.setErrorHandler(new ErrorHandler() {
-                @Override
-                public void warning(SAXParseException e) {
-                }
-
-                @Override
-                public void error(SAXParseException e) throws SAXException {
-                    throw e;
-                }
-
-                @Override
-                public void fatalError(SAXParseException e) throws SAXException {
-                    throw e;
-                }
-            });
-            return builder.parse(file);
+            return builder().parse(file);
         } catch (Exception e) {
             throw new InvalidMarketFileException("The file is not a well-formed XML file: " + e.getMessage());
         }
+    }
+
+    /** An exercise 3 file arrives over the network, so there is no file to open. */
+    private static Document parse(InputStream xml) {
+        try {
+            return builder().parse(xml);
+        } catch (Exception e) {
+            throw new InvalidMarketFileException("The file is not a well-formed XML file: " + e.getMessage());
+        }
+    }
+
+    private static DocumentBuilder builder() throws ParserConfigurationException {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setIgnoringElementContentWhitespace(true);
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        // Without this the parser prints its own report to the console before
+        // failing, which the caller has no way to show or suppress.
+        builder.setErrorHandler(new ErrorHandler() {
+            @Override
+            public void warning(SAXParseException e) {
+            }
+
+            @Override
+            public void error(SAXParseException e) throws SAXException {
+                throw e;
+            }
+
+            @Override
+            public void fatalError(SAXParseException e) throws SAXException {
+                throw e;
+            }
+        });
+        return builder;
     }
 
     // ---------- events ----------
@@ -134,7 +218,7 @@ public final class MarketFileLoader {
     private static Map<Integer, ParsedEvent> parseEvents(List<Element> eventElements) {
         Map<Integer, ParsedEvent> byId = new LinkedHashMap<>();
         for (Element element : eventElements) {
-            ParsedEvent parsed = parseEvent(element);
+            ParsedEvent parsed = parseEvent(element, true);
             if (byId.containsKey(parsed.id)) {
                 throw new InvalidMarketFileException("Duplicate event id " + parsed.id + ": used by '"
                         + byId.get(parsed.id).name + "' and '" + parsed.name + "'.");
@@ -144,11 +228,20 @@ public final class MarketFileLoader {
         return byId;
     }
 
-    private static ParsedEvent parseEvent(Element element) {
+    /**
+     * @param withId exercise 2 files number their events; exercise 3 files do
+     *               not, and the market hands the id out instead
+     */
+    private static ParsedEvent parseEvent(Element element, boolean withId) {
         ParsedEvent parsed = new ParsedEvent();
 
-        parsed.name = requiredAttribute(element, "name", "An event");
-        parsed.id = parseIntElement(element, "id", parsed.name);
+        parsed.name = requiredAttribute(element, "name", "An event").trim();
+        if (parsed.name.isEmpty()) {
+            throw new InvalidMarketFileException("An event has an empty name.");
+        }
+        if (withId) {
+            parsed.id = parseIntElement(element, "id", parsed.name);
+        }
         parsed.description = textOfChild(element, "description", parsed.name);
 
         Element commissionElement = firstChildElement(element, "commission");
@@ -162,8 +255,8 @@ public final class MarketFileLoader {
             throw new InvalidMarketFileException("Event '" + parsed.name + "' has a non-numeric commission value.");
         }
         if (parsed.commissionPercent < 0 || parsed.commissionPercent > 90) {
-            throw new InvalidMarketFileException("Event '" + parsed.name + "' (id " + parsed.id
-                    + ") has commission " + parsed.commissionPercent + " - allowed range is 0 to 90.");
+            throw new InvalidMarketFileException("Event '" + parsed.name + "' has commission "
+                    + parsed.commissionPercent + " - allowed range is 0 to 90.");
         }
         String typeValue = commissionElement.getAttribute("type");
         parsed.commissionType = CommissionType.fromXmlValue(typeValue);

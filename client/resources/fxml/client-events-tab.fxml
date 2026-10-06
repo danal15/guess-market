@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<SplitPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+           fx:controller="controller.ClientEventsTabController" dividerPositions="0.5">
+    <items>
+
+        <VBox spacing="6" styleClass="pane-box">
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8"/>
+            </padding>
+
+            <FlowPane hgap="14" vgap="4">
+                <HBox spacing="4" alignment="CENTER_LEFT">
+                    <Label text="Method" styleClass="hint-label"/>
+                    <HBox fx:id="methodFilterBox" spacing="3"/>
+                </HBox>
+                <HBox spacing="4" alignment="CENTER_LEFT">
+                    <Label text="Status" styleClass="hint-label"/>
+                    <HBox fx:id="statusFilterBox" spacing="3"/>
+                </HBox>
+                <HBox spacing="4" alignment="CENTER_LEFT">
+                    <Label text="Commission" styleClass="hint-label"/>
+                    <HBox fx:id="commissionFilterBox" spacing="3"/>
+                </HBox>
+            </FlowPane>
+
+            <TableView fx:id="eventsTable" minHeight="120">
+                <VBox.vgrow>
+                    <Priority fx:constant="ALWAYS"/>
+                </VBox.vgrow>
+            </TableView>
+        </VBox>
+
+        <VBox spacing="6" styleClass="pane-box">
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8"/>
+            </padding>
+            <Label text="Event details" styleClass="section-title"/>
+            <Label fx:id="detailsHint" styleClass="hint-label" wrapText="true"
+                   text="Viewing only. To take part in this event, open the Account tab."/>
+            <ScrollPane fx:id="detailsHolder" fitToWidth="true">
+                <VBox.vgrow>
+                    <Priority fx:constant="ALWAYS"/>
+                </VBox.vgrow>
+            </ScrollPane>
+        </VBox>
+
+    </items>
+</SplitPane>

@@ -118,7 +118,7 @@ public abstract class Event implements Serializable {
         if (fee <= 0) {
             return 0.0;
         }
-        buyer.pay(fee);
+        buyer.pay(fee, "Commission paid", getName());
         buyerHolding.addCommission(fee);
         creditCommission(marketMaker, fee);
         return fee;
@@ -129,7 +129,7 @@ public abstract class Event implements Serializable {
         if (amount <= 0) {
             return;
         }
-        marketMaker.receive(amount);
+        marketMaker.receive(amount, "Commission received", getName());
         marketMaker.holdingFor(id).recordMarketMakerReceived(amount);
         totalCommissionCollected += amount;
     }

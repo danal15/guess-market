@@ -1,6 +1,7 @@
 package engine.core;
 
 import engine.api.exception.TradingException;
+import engine.model.ChatMessage;
 import engine.model.Event;
 import engine.model.User;
 
@@ -21,6 +22,7 @@ public class Market implements Serializable {
 
     private final List<Event> events;
     private final List<User> users;
+    private final List<ChatMessage> chat = new ArrayList<>();
     private long sequence;
 
     public Market(List<Event> events, List<User> users) {
@@ -49,9 +51,11 @@ public class Market implements Serializable {
         return Optional.empty();
     }
 
+    /** Names are matched the way login compares them: trimmed, ignoring case. */
     public Optional<User> findUserByName(String name) {
+        String wanted = normalised(name);
         for (User user : users) {
-            if (user.getName().equals(name)) {
+            if (normalised(user.getName()).equals(wanted)) {
                 return Optional.of(user);
             }
         }
@@ -81,16 +85,51 @@ public class Market implements Serializable {
         return max + 1;
     }
 
+    /**
+     * Event names are the identity that survives across files: exercise 3 files
+     * carry no id, and two people may upload at any time, so the name is what
+     * says whether an event is already here. Compared without regard to case or
+     * surrounding space, so "World Cup" cannot arrive twice wearing a hat.
+     */
     public boolean hasEventNamed(String name) {
+        return findEventByName(name).isPresent();
+    }
+
+    public Optional<Event> findEventByName(String name) {
+        String wanted = normalised(name);
         for (Event event : events) {
-            if (event.getName().equals(name)) {
-                return true;
+            if (normalised(event.getName()).equals(wanted)) {
+                return Optional.of(event);
             }
         }
-        return false;
+        return Optional.empty();
     }
 
     public void addEvent(Event event) {
         events.add(event);
+    }
+
+    // ---------- users, which in exercise 3 arrive by logging in ----------
+
+    public boolean hasUserNamed(String name) {
+        return findUserByName(name).isPresent();
+    }
+
+    public void addUser(User user) {
+        users.add(user);
+    }
+
+    // ---------- chat, which lives with the market because it outlives any one client ----------
+
+    public List<ChatMessage> getChat() {
+        return Collections.unmodifiableList(chat);
+    }
+
+    public void addChatMessage(ChatMessage message) {
+        chat.add(message);
+    }
+
+    private static String normalised(String name) {
+        return name == null ? "" : name.trim().toLowerCase();
     }
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_5_0.xsd"
+         version="5.0">
+
+    <display-name>Guess Market</display-name>
+
+    <!-- The servlets and the context listener declare themselves with
+         annotations, so there is nothing to repeat here. This file is kept so
+         the archive is recognisably a web application and so the session
+         timeout is something we chose rather than inherited. -->
+
+    <session-config>
+        <session-timeout>120</session-timeout>
+    </session-config>
+
+</web-app>

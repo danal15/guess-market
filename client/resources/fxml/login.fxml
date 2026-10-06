@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.geometry.Pos?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+           fx:controller="controller.LoginController" styleClass="pane-box">
+
+    <VBox spacing="12" alignment="CENTER" maxWidth="420">
+        <padding>
+            <Insets top="24" right="28" bottom="24" left="28"/>
+        </padding>
+
+        <Label text="Guess Market" styleClass="app-title"/>
+        <Label text="Pick a name to trade under. Names are taken for as long as the server runs,
+so if yours is in use already, choose another." styleClass="hint-label" wrapText="true"
+               textAlignment="CENTER" alignment="CENTER" maxWidth="Infinity"/>
+
+        <HBox spacing="8" alignment="CENTER">
+            <TextField fx:id="nameField" promptText="Your name" prefWidth="210"
+                       onAction="#onLogin"/>
+            <Button fx:id="loginButton" text="Log in" onAction="#onLogin" defaultButton="true"/>
+        </HBox>
+
+        <Label fx:id="messageLabel" styleClass="blocked-label" wrapText="true"
+               textAlignment="CENTER" maxWidth="Infinity" alignment="CENTER"/>
+
+        <Label fx:id="serverLabel" styleClass="hint-label" alignment="CENTER"
+               maxWidth="Infinity"/>
+    </VBox>
+
+    <padding>
+        <Insets top="18" right="18" bottom="18" left="18"/>
+    </padding>
+    <alignment>
+        <Pos fx:constant="CENTER"/>
+    </alignment>
+</StackPane>

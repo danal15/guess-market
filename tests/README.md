@@ -11,6 +11,7 @@ What each suite covers, and what it needs.
 | `Hammer.java` | yes | 8 | Many clients at once. Sixteen racing for one name (exactly one may win), then twelve trading, polling and chatting together, and the money counted afterwards. |
 | `api_test.sh` | yes, **fresh** | 80 | The servlets on their own, the way the lecturer suggests checking them with Postman. Login, uploads and their refusals, money, trading, closing, chat. |
 | `edge_test.sh` | yes | 32 | The awkward corners: a user who does nothing, names differing by case or space, boundary values in a file, an event opened with no stock, closing with nobody holding the winner, a stale event id, and what one user may learn about another. |
+| `web_test.sh` | yes, **and run-web.bat** | 29 | The web client's own server, which is what exercise 4 adds. That it serves the page, that it hands out nothing outside its folder, and that every kind of call the page makes - form bodies, a JSON body, a query string, a session cookie, a refusal - reaches Tomcat and comes back unchanged. One check sends the same request both ways round and compares the answers, because the proxy has to be a pipe and not a translator. |
 
 ## Running them
 
@@ -25,6 +26,12 @@ and the two shell ones from Git Bash:
 ```
 bash tests/api_test.sh
 bash tests/edge_test.sh
+```
+
+`web_test.sh` needs `run-web.bat` running as well as the server:
+
+```
+bash tests/web_test.sh
 ```
 
 `api_test.sh` wants a server that has just started, because the market keeps

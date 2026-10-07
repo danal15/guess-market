@@ -40,6 +40,10 @@ java -cp "%OUT%" Hammer
 
 echo.
 echo ============ the servlets on their own ============
-echo These two are shell scripts; run them from Git Bash:
+echo These are shell scripts; run them from Git Bash:
 echo   bash tests/api_test.sh
 echo   bash tests/edge_test.sh
+echo.
+echo ============ the web client's server ============
+echo Needs run-web.bat running as well as the server:
+echo   bash tests/web_test.sh

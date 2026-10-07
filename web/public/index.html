@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guess Market</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- The login screen. Shown on its own until the server accepts a name. -->
+<div class="login-wrap" id="loginScreen" hidden>
+  <div class="login-card">
+    <span class="app-title">Guess Market</span>
+    <p class="hint">
+      Pick a name to trade under. Names are taken for as long as the server
+      runs, so if yours is in use already, choose another.
+    </p>
+    <div class="row" style="justify-content:center;margin-top:14px">
+      <input type="text" id="loginName" placeholder="Your name" maxlength="40" autocomplete="off">
+      <button class="action" id="loginButton">Log in</button>
+    </div>
+    <p class="message bad" id="loginMessage" hidden></p>
+    <p class="hint" id="loginServer" style="margin-top:16px"></p>
+  </div>
+</div>
+
+<!-- Shown while the first request is still out, so the page never flashes the
+     login screen at somebody who is in fact still logged in. -->
+<div class="login-wrap" id="openingScreen">
+  <div class="login-card">
+    <span class="app-title">Guess Market</span>
+    <p class="hint">Asking the server where we stand...</p>
+  </div>
+</div>
+
+<!-- The market itself. -->
+<div id="marketScreen" hidden>
+
+  <div class="header">
+    <span class="app-title">Guess Market</span>
+    <span class="divider"></span>
+    <span class="chip" id="userChip"></span>
+    <span class="chip" id="balanceChip">Balance: -</span>
+    <span class="chip bad" id="blockedChip" hidden
+          title="This account went below zero. Load funds to lift the block.">Blocked</span>
+    <span class="spacer"></span>
+    <span class="hint" id="statusLine"></span>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tabEvents" role="tab" aria-selected="true" aria-controls="eventsScreen">Events</button>
+    <button class="tab" id="tabAccount" role="tab" aria-selected="false" aria-controls="accountScreen">Account</button>
+  </div>
+
+  <!-- ------------------------------------------------------- events -->
+  <section class="screen" id="eventsScreen" role="tabpanel">
+    <div class="columns">
+
+      <div class="col">
+        <div class="panel">
+          <div class="filters" id="filters">
+            <div class="filter-group">
+              <span class="hint">Method</span>
+              <span class="row tight" id="methodFilter"></span>
+            </div>
+            <div class="filter-group">
+              <span class="hint">Status</span>
+              <span class="row tight" id="statusFilter"></span>
+            </div>
+            <div class="filter-group">
+              <span class="hint">Commission</span>
+              <span class="row tight" id="commissionFilter"></span>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <!-- The headings are built in script: they are clickable, and
+                   which one is sorted by has to show in them. -->
+              <thead><tr id="eventsHead"></tr></thead>
+              <tbody id="eventsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="panel">
+          <h2 class="section-title">Event details</h2>
+          <p class="hint" id="eventsHint" hidden>
+            Viewing only. To take part in this event, open the Account tab.
+          </p>
+          <div id="eventDetail"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------ account -->
+  <section class="screen" id="accountScreen" role="tabpanel" hidden>
+    <div class="columns">
+
+      <div class="col narrow">
+        <div class="panel">
+          <div class="row">
+            <h2 class="section-title" style="margin:0">Your account</h2>
+            <span class="spacer"></span>
+            <button class="action" id="loadFundsButton">Load funds...</button>
+          </div>
+          <p class="chip" id="ownBalance" style="margin:8px 0">Balance: -</p>
+          <p class="hint">Every movement of money</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th class="num">#</th><th>What happened</th><th>Event</th>
+                    <th>Amount</th><th class="num">Balance after</th></tr>
+              </thead>
+              <tbody id="movementsBody"></tbody>
+            </table>
+          </div>
+          <!-- Static, so opening it survives the once-a-second refresh. -->
+          <details id="chartPanel">
+            <summary>Balance over time</summary>
+            <div id="balanceChart"></div>
+          </details>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">Other users</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>User</th><th class="num">Balance</th><th>Market maker</th></tr>
+              </thead>
+              <tbody id="usersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="panel">
+          <div class="row">
+            <h2 class="section-title" style="margin:0">All events - pick one to take part in it</h2>
+            <span class="spacer"></span>
+            <button class="action" id="createEventButton">Create new event...</button>
+          </div>
+          <div class="table-wrap" style="margin-top:6px">
+            <table>
+              <thead>
+                <tr><th>Event</th><th>Status</th><th>Method</th><th>Your role</th></tr>
+              </thead>
+              <tbody id="myEventsBody"></tbody>
+            </table>
+          </div>
+          <div class="row" id="actionBar" style="margin-top:10px;min-height:32px"></div>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">Event details and trade</h2>
+          <div id="involvement"></div>
+          <details id="fullDetailsPanel">
+            <summary>Full event details</summary>
+            <div id="involvementDetail"></div>
+          </details>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- The chat sits under both tabs' content, the way the desktop window
+       keeps it in a drawer along the bottom. -->
+  <details class="panel" id="chatPanel">
+    <summary id="chatSummary">Chat</summary>
+    <div>
+      <div class="chat-lines" id="chatLines"></div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="chatText" placeholder="Say something to everyone"
+               maxlength="500" autocomplete="off" style="flex:1 1 200px">
+        <button class="action" id="chatSend">Send</button>
+      </div>
+    </div>
+  </details>
+</div>
+
+<!-- A dialog used for everything that asks a question or reports an answer. -->
+<dialog id="dialog">
+  <form method="dialog">
+    <div class="dialog-head" id="dialogTitle"></div>
+    <div class="dialog-body">
+      <div class="message" id="dialogMessage"></div>
+      <div id="dialogFields"></div>
+    </div>
+    <div class="dialog-foot" id="dialogFoot"></div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

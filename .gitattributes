@@ -1,0 +1,29 @@
+# Line endings, decided here rather than left to whoever clones the repository.
+#
+# This machine has core.autocrlf on, which turns every text file into CRLF on
+# checkout. That is right for a batch file - cmd seeks through one by byte
+# offset and can end up reading from the middle of a line - and wrong for a
+# shell script, where bash would read the carriage return as part of the
+# command and fail on every line.
+
+* text=auto
+
+*.sh   text eol=lf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+*.java text eol=lf
+*.js   text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.xml  text eol=lf
+*.xsd  text eol=lf
+*.fxml text eol=lf
+*.md   text eol=lf
+
+*.jar  binary
+*.war  binary
+*.pdf  binary
+*.docx binary
+*.png  binary

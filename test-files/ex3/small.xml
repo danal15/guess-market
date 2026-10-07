@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Guess-Market xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="GM-EX3-Schema.xsd">
+<GM-events>
+	<GM-event name="Mujtaba is Dead">
+		<description>This event gambles if Mujtaba is a live or not. it will be determined if he will be shown in public until 31.8.26</description>
+		<commission type="on-purchase">5</commission>
+		<GM-options>
+			<GM-option>Hell Yea !</GM-option>
+			<GM-option>No way !</GM-option>
+		</GM-options>
+		<GM-method>
+			<GM-LMSR>
+				<b>100</b>
+			</GM-LMSR>
+		</GM-method>
+	</GM-event>
+</GM-events>
+</Guess-Market>

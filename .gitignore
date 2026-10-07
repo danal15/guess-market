@@ -3,6 +3,7 @@
 /out3/
 /build/
 /ex3-client/
+/tests/out/
 *.class
 *.jar
 *.war

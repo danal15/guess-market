@@ -398,9 +398,11 @@ function dialog(title, message, fields, buttons) {
 
   return new Promise((resolve) => {
     let answered = false;
+    const onClose = () => finish(null);
     const finish = (value) => {
       if (answered) return;
       answered = true;
+      box.removeEventListener('close', onClose);
       resolve(value);
     };
     (buttons || [{ label: 'OK', value: true }]).forEach((b) => {
@@ -412,12 +414,28 @@ function dialog(title, message, fields, buttons) {
     });
     // Escape closes the dialog without pressing anything; without noticing that,
     // the promise would never settle and the action would hang for ever.
-    box.addEventListener('close', () => finish(null), { once: true });
+    box.addEventListener('close', onClose);
     box.showModal();
   });
 }
 
-const say = (title, message) => dialog(title, message, [], [{ label: 'OK', value: true }]);
+/**
+ * Asks something, waiting first for the previous dialog to be properly gone.
+ *
+ * There is one dialog element, used again and again. Closing it does not
+ * announce that straight away - the browser leaves the close event for a later
+ * turn - so a second dialog opened immediately after the first was answered can
+ * be handed the first one's close and treat it as the user cancelling. Waiting
+ * one turn costs nothing and the question is asked only once the element is
+ * quiet. This is why every confirmation goes through here rather than calling
+ * dialog directly.
+ */
+function ask(title, message, fields, buttons) {
+  return new Promise((settle) => setTimeout(settle, 0))
+    .then(() => dialog(title, message, fields, buttons));
+}
+
+const say = (title, message) => ask(title, message, [], [{ label: 'OK', value: true }]);
 
 const cancelAnd = (label) => [
   { label: 'Cancel', value: false, quiet: true }, { label, value: true },
@@ -470,6 +488,14 @@ function backToLogin(why) {
   state.selectedEventId = null;
   state.chatLines = [];
   state.prints = {};
+  state.offline = false;
+  $('statusLine').textContent = '';
+  $('statusLine').title = '';
+  $('userChip').textContent = '';
+  $('userChip').title = '';
+  $('balanceChip').textContent = 'Balance: -';
+  $('blockedChip').hidden = true;
+  document.title = 'Guess Market';
   const message = $('loginMessage');
   message.textContent = why || '';
   message.hidden = !why;
@@ -491,11 +517,15 @@ async function openingMove() {
   try {
     const snapshot = await api.sync(null, 0);
     state.snapshot = snapshot;
-    state.chatLines = snapshot.newChatMessages.slice();
+    absorbChat(snapshot);
     enterMarket(snapshot.user);
     renderAll();
   } catch (error) {
-    backToLogin('');
+    // Not being logged in is the ordinary case and needs no explanation.
+    // Anything else - the server stopped, a refusal - has to be said, because
+    // the session may well still be good and picking a different name would
+    // not help with any of it.
+    backToLogin(error.type === 'NotLoggedIn' ? '' : error.message);
   }
 }
 
@@ -545,27 +575,43 @@ async function poll() {
   }
   state.polling = true;
   try {
-    state.snapshot = await api.sync(state.selectedEventId, state.chatLines.length);
+    let fresh;
+    try {
+      fresh = await api.sync(state.selectedEventId, state.chatLines.length);
+    } catch (error) {
+      if (error.type === 'NotLoggedIn') {
+        backToLogin(error.message);
+        return;
+      }
+      // Said once, quietly, in the header. A dialog for every failed poll would
+      // bury the window within half a minute. A server that cannot be reached
+      // and a server that answered "no" are different problems, so they read
+      // differently rather than both looking like a dead network.
+      state.offline = true;
+      $('statusLine').textContent = error.type === 'Unreachable'
+        ? 'Not connected to the server - retrying'
+        : error.message || 'The server refused the request';
+      $('statusLine').title = error.message;
+      return;
+    }
+
     if (state.offline) {
       state.offline = false;
       $('statusLine').textContent = '';
       $('statusLine').title = '';
     }
-    renderAll();
-  } catch (error) {
-    if (error.type === 'NotLoggedIn') {
-      backToLogin(error.message);
-      return;
+    state.snapshot = fresh;
+    absorbChat(fresh);
+    try {
+      renderAll();
+    } catch (brokenScreen) {
+      // Caught apart from the request on purpose. A mistake in the drawing is
+      // this page's own, and reporting it as a connection problem would send
+      // somebody off to restart a server that is working perfectly well.
+      console.error(brokenScreen);
+      $('statusLine').textContent = 'Something went wrong drawing the page';
+      $('statusLine').title = String(brokenScreen && brokenScreen.message);
     }
-    // Said once, quietly, in the header. A dialog for every failed poll would
-    // bury the window within half a minute. A server that cannot be reached and
-    // a server that answered "no" are different problems, so they read
-    // differently rather than both looking like a dead network.
-    state.offline = true;
-    $('statusLine').textContent = error.type === 'Unreachable'
-      ? 'Not connected to the server - retrying'
-      : error.message || 'The server refused the request';
-    $('statusLine').title = error.message;
   } finally {
     state.polling = false;
     if (state.refreshWanted) {
@@ -1111,8 +1157,16 @@ function renderInvolvement() {
 
 // ------------------------------------------------------------------- chat
 
-function renderChat() {
-  const snap = state.snapshot;
+/**
+ * Takes in the chat lines an answer brought.
+ *
+ * Done once for each answer from the server, and deliberately not inside the
+ * drawing: the page is redrawn for all sorts of reasons - opening the drawer,
+ * landing on the page - and a batch of lines added again each time would show
+ * somebody saying the same thing twice and then, once the counts disagreed,
+ * empty the whole conversation.
+ */
+function absorbChat(snap) {
   // A server restart leaves this page holding more lines than exist. Without
   // noticing that, the count sent on every poll would stay too high for ever
   // and no new line would ever arrive.
@@ -1120,7 +1174,10 @@ function renderChat() {
   if (snap.newChatMessages.length) {
     state.chatLines = state.chatLines.concat(snap.newChatMessages);
   }
+}
 
+function renderChat() {
+  const snap = state.snapshot;
   const panel = $('chatPanel');
   $('chatSummary').textContent = !panel.open && snap.chatTotal > 0
     ? 'Chat (' + snap.chatTotal + ')'
@@ -1140,15 +1197,19 @@ function renderChat() {
 
 async function sendChat() {
   const field = $('chatText');
+  const button = $('chatSend');
   const said = field.value.trim();
-  if (!said) return;
+  if (!said || button.disabled) return;
   field.value = '';
+  button.disabled = true;
   try {
     await api.chat(said);
   } catch (error) {
     // Put it back, so a refusal does not cost somebody what they typed.
     field.value = said;
     await say('That was not sent', error.message);
+  } finally {
+    button.disabled = false;
   }
   await refresh();
 }
@@ -1156,7 +1217,7 @@ async function sendChat() {
 // ---------------------------------------------------------------- actions
 
 async function confirmOpen(event, opening) {
-  const go = await dialog("Open '" + event.name + "'?",
+  const go = await ask("Open '" + event.name + "'?",
     'You will pay ' + fmt.money(opening) +
     ' into the event account to start it. This cannot be undone.',
     [], cancelAnd('Open'));
@@ -1172,12 +1233,12 @@ async function askClose(event) {
     el('option', { value: '0' }, event.option1Name),
     el('option', { value: '1' }, event.option2Name),
   ]);
-  const go = await dialog('Close event', event.name,
+  const go = await ask('Close event', event.name,
     [fieldRow('Winning option:', choice)], cancelAnd('Close event'));
   if (!go) return;
 
   const winner = choice.selectedIndex === 0 ? event.option1Name : event.option2Name;
-  const sure = await dialog("Close '" + event.name + "'?",
+  const sure = await ask("Close '" + event.name + "'?",
     "'" + winner + "' will be declared the winner. This cannot be undone.",
     [], cancelAnd('Close event'));
   if (!sure) return;
@@ -1214,18 +1275,28 @@ async function askClose(event) {
 function liveQuote(show) {
   let pending = null;
   let latest = 0;
-  return () => {
+  let finished = false;
+  const update = () => {
+    if (finished) return;
     clearTimeout(pending);
     const mine = ++latest;
     pending = setTimeout(async () => {
       try {
         const answer = await show.quote();
-        if (mine === latest) show.good(answer);
+        if (mine === latest && !finished) show.good(answer);
       } catch (error) {
-        if (mine === latest) show.bad(error.message);
+        if (mine === latest && !finished) show.bad(error.message);
       }
     }, 200);
   };
+  // Called once the dialog is gone. Without it a quote asked just before the
+  // last keystroke was confirmed would still be sent, and its answer written
+  // into boxes that are no longer on the screen.
+  update.stop = () => {
+    finished = true;
+    clearTimeout(pending);
+  };
+  return update;
 }
 
 /** A row of a preview whose value is replaced as the numbers change. */
@@ -1322,10 +1393,11 @@ async function askBuy(event) {
   quantity.addEventListener('input', update);
   update();
 
-  const go = await dialog('Buy shares', event.name,
+  const go = await ask('Buy shares', event.name,
     [fieldRow('Option:', option), fieldRow('Quantity:', quantity),
      previewGrid(rows), warning.node],
     cancelAnd('Buy'));
+  update.stop();
   if (!go) return;
 
   const asked = wholeNumber(quantity);
@@ -1409,6 +1481,7 @@ async function askOrder(event) {
   const blank = (message) => {
     rows.forEach((r) => { r.value.textContent = '-'; });
     note.textContent = '';
+    allowed.textContent = '';
     warning.set(message);
   };
 
@@ -1461,10 +1534,11 @@ async function askOrder(event) {
   [quantity, price].forEach((c) => c.addEventListener('input', update));
   update();
 
-  const go = await dialog('Place an order', event.name,
+  const go = await ask('Place an order', event.name,
     [fieldRow('Option:', option), fieldRow('Side:', side), fieldRow('Quantity:', quantity),
      fieldRow('Price per share:', price), allowed, previewGrid(rows), note, warning.node],
     cancelAnd('Place order'));
+  update.stop();
   if (!go) return;
 
   const asked = wholeNumber(quantity);
@@ -1507,7 +1581,7 @@ async function askOrder(event) {
 
 async function askLoadFunds() {
   const amount = el('input', { type: 'number', min: '0.01', step: '1', value: '100' });
-  const go = await dialog('Load funds', 'How much would you like to load?',
+  const go = await ask('Load funds', 'How much would you like to load?',
     [fieldRow('Amount to put into your account:', amount)], cancelAnd('Load'));
   if (!go) return;
 
@@ -1556,7 +1630,7 @@ async function askCreateEvent() {
   method.addEventListener('change', showMethod);
   showMethod();
 
-  const go = await dialog('Create a new event',
+  const go = await ask('Create a new event',
     state.snapshot.user.name + ' will be the market maker of this event.',
     [fieldRow('Name:', name), fieldRow('Description:', description),
      fieldRow('Commission %:', commission), fieldRow('Collected:', collected),

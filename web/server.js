@@ -56,10 +56,20 @@ function proxy(request, response) {
     (answer) => {
       response.writeHead(answer.statusCode, answer.headers);
       answer.pipe(response);
+      // Tomcat stopped half way through an answer. Nothing can be said at this
+      // point - the status line has gone already - so the browser is cut off
+      // rather than left holding a connection that will never finish.
+      answer.on('error', () => response.destroy());
     }
   );
 
   forwarded.on('error', (error) => {
+    // Once the answer has started there is no way to replace it with this one,
+    // and trying would throw where nothing is waiting to catch it.
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
     // Said in the same shape the servlets use, so the page has one way of
     // reading a refusal whether it came from the market or from here.
     response.writeHead(502, { 'Content-Type': 'application/json; charset=UTF-8' });
@@ -74,17 +84,29 @@ function proxy(request, response) {
     );
   });
 
+  // The browser gave up and went away; stop asking Tomcat on its behalf.
+  request.on('aborted', () => forwarded.destroy());
   request.pipe(forwarded);
 }
 
 function serveFile(request, response) {
-  const asked = decodeURIComponent(new URL(request.url, 'http://x').pathname);
+  let asked;
+  try {
+    asked = decodeURIComponent(new URL(request.url, 'http://x').pathname);
+  } catch (notAnAddress) {
+    // A stray percent sign is not a path. Without this the whole server would
+    // stop on one mistyped address.
+    response.writeHead(400, { 'Content-Type': 'text/plain; charset=UTF-8' });
+    response.end('That is not a valid address.');
+    return;
+  }
   const wanted = asked === '/' ? '/index.html' : asked;
 
   // Resolved and then checked, so a path with ".." in it cannot climb out of
-  // the folder that is meant to be public.
+  // the folder that is meant to be public. The separator matters: without it a
+  // folder merely starting with the same letters would pass as being inside.
   const file = path.join(PUBLIC_DIR, wanted);
-  if (!file.startsWith(PUBLIC_DIR)) {
+  if (file !== PUBLIC_DIR && !file.startsWith(PUBLIC_DIR + path.sep)) {
     response.writeHead(403).end('Forbidden');
     return;
   }
@@ -107,10 +129,18 @@ function serveFile(request, response) {
 
 http
   .createServer((request, response) => {
-    if (isForMarket(request.url)) {
-      proxy(request, response);
-    } else {
-      serveFile(request, response);
+    try {
+      if (isForMarket(request.url)) {
+        proxy(request, response);
+      } else {
+        serveFile(request, response);
+      }
+    } catch (unexpected) {
+      // Whatever it was, answering badly is better than stopping: the person
+      // using this has a browser open and no way to restart it from there.
+      console.error('Could not answer ' + request.url + ': ' + unexpected.message);
+      if (!response.headersSent) response.writeHead(500);
+      response.end();
     }
   })
   .listen(PORT, () => {

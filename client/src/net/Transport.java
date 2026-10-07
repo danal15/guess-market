@@ -53,7 +53,11 @@ public class Transport {
 
     public Transport(String baseUrl) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        // HTTP/1.1 on purpose. The default is HTTP/2, which over plain http
+        // first asks Tomcat to upgrade the connection; Tomcat answers a POST
+        // that asks this with 400 and the call then times out.
         this.http = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .cookieHandler(new CookieManager(null, CookiePolicy.ACCEPT_ALL))
                 .connectTimeout(TIMEOUT)
                 .followRedirects(HttpClient.Redirect.NORMAL)

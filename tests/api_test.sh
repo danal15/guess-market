@@ -48,7 +48,7 @@ upload() { # upload <jar> <file>
 # for the life of the server, so this suite wants a market nobody has uploaded
 # into yet. Saying so beats a cascade of confusing failures.
 curl -sS -o "$JARS/probe" -c "$JARS/probe.jar" -b "$JARS/probe.jar"      -X POST --data-urlencode "name=Probe$RUN" "$BASE/login" > /dev/null
-EXISTING=$(curl -sS -b "$JARS/probe.jar" -c "$JARS/probe.jar" "$BASE/sync"   | python -c "import sys,json; print(json.load(sys.stdin).get('totalEventCount', -1))" 2>/dev/null)
+EXISTING=$(curl -sS -b "$JARS/probe.jar" -c "$JARS/probe.jar" "$BASE/sync"   | ${PYTHON:-python} -c "import sys,json; print(json.load(sys.stdin).get('totalEventCount', -1))" 2>/dev/null)
 if [ "$EXISTING" != "0" ]; then
   echo "This suite needs a freshly started server (the market already holds $EXISTING events)."
   echo "Restart Tomcat and run it again."
@@ -172,7 +172,7 @@ contains "and says which format it is" "exercise 2 file" "$BODY"
 
 echo
 echo "=== F. money, and opening an event ==="
-EVENT_ID=$(printf '%s' "$BODY" > /dev/null; req "$A" GET /sync; printf '%s' "$BODY" | python -c "
+EVENT_ID=$(printf '%s' "$BODY" > /dev/null; req "$A" GET /sync; printf '%s' "$BODY" | ${PYTHON:-python} -c "
 import sys, json
 snap = json.load(sys.stdin)
 print(next(e['id'] for e in snap['events'] if e['name'] == 'Mujtaba is Dead'))
@@ -228,7 +228,7 @@ contains "and the event detail came with it" '"tradesNewestFirst"' "$BODY"
 
 echo
 echo "=== H. the order book ==="
-BOOK_ID=$(req "$B" GET /sync; printf '%s' "$BODY" | python -c "
+BOOK_ID=$(req "$B" GET /sync; printf '%s' "$BODY" | ${PYTHON:-python} -c "
 import sys, json
 snap = json.load(sys.stdin)
 print(next(e['id'] for e in snap['events'] if e['name'] == 'World Cap Winner'))

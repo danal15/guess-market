@@ -27,7 +27,7 @@ req() {
   S=$(curl "${args[@]}" "$BASE$path"); BODY=$(cat "$T/body")
 }
 up() { S=$(curl -sS -o "$T/body" -w "%{http_code}" -b "$1" -c "$1" -F "file=@$2;type=application/xml" "$BASE/upload"); BODY=$(cat "$T/body"); }
-evid() { printf '%s' "$2" | python -c "
+evid() { printf '%s' "$2" | ${PYTHON:-${PYTHON:-python}} -c "
 import sys,json
 print(next((e['id'] for e in json.load(sys.stdin)['events'] if e['name']==sys.argv[1]), -1))
 " "$1"; }
@@ -136,7 +136,7 @@ echo
 echo "=== H. privacy: what one user may learn about another ==="
 req "$S2" GET /sync
 has "the other user is listed" "Quiet$N" "$BODY"
-python - "$BODY" "Quiet$N" <<'PY'
+${PYTHON:-python} - "$BODY" "Quiet$N" <<'PY'
 import sys, json
 snap = json.loads(sys.argv[1])
 other = next(u for u in snap["users"] if u["name"] == sys.argv[2])
@@ -146,7 +146,7 @@ print("  [%s]   %-58s %s" % ("ok" if not extra else "FAIL",
       "a user row carries nothing beyond the allowed fields",
       sorted(other) if not extra else "EXTRA: " + str(extra)))
 PY
-hasnt "and the movements shown are only the caller's own" "Funds loaded" "$(req "$S2" GET /sync; printf '%s' "$BODY" | python -c "
+hasnt "and the movements shown are only the caller's own" "Funds loaded" "$(req "$S2" GET /sync; printf '%s' "$BODY" | ${PYTHON:-${PYTHON:-python}} -c "
 import sys, json
 print(json.dumps(json.load(sys.stdin)['movements']))
 ")"

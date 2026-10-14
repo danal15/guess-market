@@ -588,7 +588,7 @@ async function poll() {
       // and a server that answered "no" are different problems, so they read
       // differently rather than both looking like a dead network.
       state.offline = true;
-      $('statusLine').textContent = error.type === 'Unreachable'
+      $('statusLine').textContent = (error.type === 'Unreachable' || error.type === 'ServerUnreachable')
         ? 'Not connected to the server - retrying'
         : error.message || 'The server refused the request';
       $('statusLine').title = error.message;
